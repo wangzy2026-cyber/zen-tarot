@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RotateCcw, Sparkles } from "lucide-react";
+
 import Starfield from "@/components/Starfield";
 import { drawCards, TarotCardData } from "@/data/tarotDeck";
 
@@ -9,16 +10,6 @@ interface DrawnCard extends TarotCardData {
   flipped: boolean;
   loaded: boolean;
 }
-
-const MOCK_READING = `你的三张牌揭示了一段深刻的内在旅程。
-
-第一张牌暗示你正处于迷雾之中——直觉与恐惧交织，真相尚未完全显现。不要急于做出判断，允许自己在未知中停留片刻。
-
-第二张牌预示着一次必要的转变。那些你以为坚固的信念或关系，可能需要经历一次重建。这不是终结，而是觉醒的开始。
-
-第三张牌是最终的祝福——在风暴之后，希望与疗愈正在降临。保持信念，宇宙正在为你编织新的可能。
-
-总结：接受当下的混沌，拥抱即将到来的变化，光明就在前方。`;
 
 const CardBack = () => (
   <div className="absolute inset-0 backface-hidden rounded-xl border border-primary/20 bg-secondary/80 backdrop-blur-sm flex items-center justify-center">
@@ -55,8 +46,75 @@ const Index = () => {
   const [phase, setPhase] = useState<"input" | "cards">("input");
   const [question, setQuestion] = useState("");
   const [cards, setCards] = useState<DrawnCard[]>([]);
+  const [reading, setReading] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const streamTriggered = useRef(false);
 
   const allFlipped = cards.length > 0 && cards.every((c) => c.flipped);
+
+  // Trigger AI reading when all cards are flipped
+  useEffect(() => {
+    if (allFlipped && !streamTriggered.current && !isStreaming) {
+      streamTriggered.current = true;
+      streamReading();
+    }
+  }, [allFlipped]);
+
+  const streamReading = async () => {
+    setIsStreaming(true);
+    setReading("");
+
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tarot-reading`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          question,
+          cards: cards.map((c) => ({ name: c.name, nameCn: c.nameCn })),
+        }),
+      });
+
+      if (!resp.ok || !resp.body) throw new Error("Stream failed");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIdx: number;
+        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, newlineIdx);
+          buffer = buffer.slice(newlineIdx + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              setReading((prev) => prev + content);
+            }
+          } catch {
+            // partial JSON, skip
+          }
+        }
+      }
+    } catch (e) {
+      console.error("AI reading error:", e);
+      setReading("星象迷离，暂时无法解读。请稍后再试。");
+    } finally {
+      setIsStreaming(false);
+    }
+  };
 
   const handleBegin = () => {
     if (!question.trim()) return;
@@ -77,6 +135,9 @@ const Index = () => {
     setPhase("input");
     setQuestion("");
     setCards([]);
+    setReading("");
+    setIsStreaming(false);
+    streamTriggered.current = false;
   };
 
   return (
@@ -163,8 +224,13 @@ const Index = () => {
                     <h2 className="text-primary text-center text-sm tracking-[0.4em] uppercase mb-6">
                       深度解析
                     </h2>
-                    <p className="text-foreground/70 text-sm leading-relaxed whitespace-pre-line">
-                      {MOCK_READING}
+                    <p className="text-foreground/70 text-sm leading-relaxed whitespace-pre-line min-h-[3rem]">
+                      {reading || (
+                        <span className="text-muted-foreground animate-pulse">
+                          星象凝聚中...
+                        </span>
+                      )}
+                      {isStreaming && <span className="inline-block w-px h-4 bg-primary/60 ml-0.5 animate-pulse" />}
                     </p>
                   </motion.div>
                 )}
