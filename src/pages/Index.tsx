@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RotateCcw, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+
 import Starfield from "@/components/Starfield";
 import { drawCards, TarotCardData } from "@/data/tarotDeck";
 
