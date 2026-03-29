@@ -14,10 +14,13 @@ serve(async (req) => {
   try {
     const { question, cards } = await req.json();
 
-    const DEEPSEEK_API_KEY = (Deno.env.get("DEEPSEEK_API_KEY") || "").trim();
+    const rawKey = Deno.env.get("DEEPSEEK_API_KEY") || "";
+    // Strip every non-ASCII / control character to produce a valid ByteString
+    const DEEPSEEK_API_KEY = rawKey.replace(/[^\x20-\x7E]/g, "").trim();
     if (!DEEPSEEK_API_KEY) {
-      throw new Error("DEEPSEEK_API_KEY is not configured");
+      throw new Error("DEEPSEEK_API_KEY is not configured or contains only invalid characters");
     }
+    console.log("DEEPSEEK_API_KEY length:", DEEPSEEK_API_KEY.length, "first 4:", DEEPSEEK_API_KEY.slice(0, 4));
 
     const cardsText = cards
       .map((c: { name: string; nameCn: string }, i: number) => `第${i + 1}张：${c.nameCn}（${c.name}）`)
@@ -49,8 +52,8 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("DeepSeek API error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "AI service error" }), {
-        status: 500,
+      return new Response(JSON.stringify({ error: `DeepSeek API 错误 (${response.status}): ${errorText}` }), {
+        status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
