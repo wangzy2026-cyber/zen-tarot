@@ -155,12 +155,12 @@ const Index = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5, duration: 0.8 }}
-                  className="w-full max-w-lg border-t border-border pt-8"
+                  className="w-full max-w-lg border-t border-primary/10 pt-8"
                 >
-                  <h2 className="text-gold text-center text-sm tracking-[0.4em] uppercase mb-6">
+                  <h2 className="text-primary text-center text-sm tracking-[0.4em] uppercase mb-6">
                     深度解析
                   </h2>
-                  <p className="text-foreground/80 text-sm leading-relaxed whitespace-pre-line">
+                  <p className="text-foreground/70 text-sm leading-relaxed whitespace-pre-line">
                     {MOCK_READING}
                   </p>
                 </motion.div>
