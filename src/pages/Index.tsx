@@ -88,8 +88,8 @@ const Index = () => {
             transition={{ duration: 0.6 }}
             className="flex flex-col items-center w-full max-w-md"
           >
-            <Sparkles className="w-6 h-6 text-gold-dim mb-6" />
-            <h1 className="text-2xl md:text-3xl font-light text-foreground mb-10 tracking-widest text-center">
+            <Sparkles className="w-6 h-6 text-primary/40 mb-6" />
+            <h1 className="text-2xl md:text-3xl font-light text-primary mb-10 tracking-widest text-center">
               塔罗启示
             </h1>
 
@@ -99,13 +99,13 @@ const Index = () => {
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleBegin()}
               placeholder="静心，输入你的困惑..."
-              className="w-full bg-transparent border-b border-border text-foreground placeholder:text-muted-foreground text-center text-lg py-3 focus:outline-none focus:border-primary transition-colors"
+              className="w-full bg-transparent border-b border-primary/15 text-primary placeholder:text-muted-foreground text-center text-lg py-3 focus:outline-none focus:border-primary/40 transition-colors"
             />
 
             <button
               onClick={handleBegin}
               disabled={!question.trim()}
-              className="mt-10 px-8 py-3 border border-gold-dim text-gold-dim text-sm tracking-[0.3em] uppercase hover:bg-gold-dim\/10 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="mt-10 px-8 py-3 border border-primary/25 text-primary/80 text-sm tracking-[0.3em] uppercase hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               开启启示
             </button>
