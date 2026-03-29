@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RotateCcw, Sparkles, Eye } from "lucide-react";
+import Starfield from "@/components/Starfield";
 
 type Phase = "input" | "cards" | "reading";
 
@@ -28,22 +29,22 @@ const MOCK_READING = `你的三张牌揭示了一段深刻的内在旅程。
 总结：接受当下的混沌，拥抱即将到来的变化，光明就在前方。`;
 
 const CardBack = () => (
-  <div className="absolute inset-0 backface-hidden rounded-xl border border-gold-dim bg-secondary flex items-center justify-center">
-    <div className="w-full h-full rounded-xl border border-gold-dim m-2 flex items-center justify-center">
+  <div className="absolute inset-0 backface-hidden rounded-xl border border-primary/20 bg-secondary/80 backdrop-blur-sm flex items-center justify-center">
+    <div className="w-full h-full rounded-xl border border-primary/10 m-2 flex items-center justify-center">
       <div className="text-center">
-        <Sparkles className="w-8 h-8 text-gold-dim mx-auto mb-2" />
-        <div className="w-12 h-px bg-gold-dim/10 mx-auto" />
+        <Sparkles className="w-8 h-8 text-primary/40 mx-auto mb-2" />
+        <div className="w-12 h-px bg-primary/15 mx-auto" />
       </div>
     </div>
   </div>
 );
 
 const CardFront = ({ card }: { card: TarotCard }) => (
-  <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-xl border border-gold-dim bg-secondary flex flex-col items-center justify-center p-4">
-    <div className="w-full flex-1 rounded-lg bg-accent flex items-center justify-center mb-3">
-      <Eye className="w-12 h-12 text-gold-dim" />
+  <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-xl border border-primary/30 bg-secondary/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 shadow-[0_0_30px_-5px_hsl(45_90%_76%/0.15)]">
+    <div className="w-full flex-1 rounded-lg bg-accent/60 flex items-center justify-center mb-3">
+      <Eye className="w-12 h-12 text-primary/50" />
     </div>
-    <p className="text-gold text-lg font-semibold tracking-wider">{card.nameCn}</p>
+    <p className="text-primary text-lg font-semibold tracking-wider">{card.nameCn}</p>
     <p className="text-muted-foreground text-sm italic">{card.name}</p>
   </div>
 );
@@ -73,7 +74,9 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12 overflow-hidden">
+    <>
+      <Starfield />
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-12 overflow-hidden">
       <AnimatePresence mode="wait">
         {/* INPUT PHASE */}
         {phase === "input" && (
@@ -85,8 +88,8 @@ const Index = () => {
             transition={{ duration: 0.6 }}
             className="flex flex-col items-center w-full max-w-md"
           >
-            <Sparkles className="w-6 h-6 text-gold-dim mb-6" />
-            <h1 className="text-2xl md:text-3xl font-light text-foreground mb-10 tracking-widest text-center">
+            <Sparkles className="w-6 h-6 text-primary/40 mb-6" />
+            <h1 className="text-2xl md:text-3xl font-light text-primary mb-10 tracking-widest text-center">
               塔罗启示
             </h1>
 
@@ -96,13 +99,13 @@ const Index = () => {
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleBegin()}
               placeholder="静心，输入你的困惑..."
-              className="w-full bg-transparent border-b border-border text-foreground placeholder:text-muted-foreground text-center text-lg py-3 focus:outline-none focus:border-primary transition-colors"
+              className="w-full bg-transparent border-b border-primary/15 text-primary placeholder:text-muted-foreground text-center text-lg py-3 focus:outline-none focus:border-primary/40 transition-colors"
             />
 
             <button
               onClick={handleBegin}
               disabled={!question.trim()}
-              className="mt-10 px-8 py-3 border border-gold-dim text-gold-dim text-sm tracking-[0.3em] uppercase hover:bg-gold-dim\/10 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="mt-10 px-8 py-3 border border-primary/25 text-primary/80 text-sm tracking-[0.3em] uppercase hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               开启启示
             </button>
@@ -152,12 +155,12 @@ const Index = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5, duration: 0.8 }}
-                  className="w-full max-w-lg border-t border-border pt-8"
+                  className="w-full max-w-lg border-t border-primary/10 pt-8"
                 >
-                  <h2 className="text-gold text-center text-sm tracking-[0.4em] uppercase mb-6">
+                  <h2 className="text-primary text-center text-sm tracking-[0.4em] uppercase mb-6">
                     深度解析
                   </h2>
-                  <p className="text-foreground/80 text-sm leading-relaxed whitespace-pre-line">
+                  <p className="text-foreground/70 text-sm leading-relaxed whitespace-pre-line">
                     {MOCK_READING}
                   </p>
                 </motion.div>
@@ -178,7 +181,8 @@ const Index = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </>
   );
 };
 
