@@ -131,5 +131,33 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Cormorant Garamond', 'Noto Serif SC', serif;
+  }
+}
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+  .text-gold {
+    color: hsl(var(--gold));
+  }
+  .text-gold-dim {
+    color: hsl(var(--gold-dim));
+  }
+  .border-gold-dim {
+    border-color: hsl(var(--gold-dim));
+  }
+  .bg-gold-dim\/10 {
+    background-color: hsl(var(--gold-dim) / 0.1);
   }
 }
