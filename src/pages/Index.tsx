@@ -78,7 +78,11 @@ const Index = () => {
         }),
       });
 
-      if (!resp.ok || !resp.body) throw new Error("Stream failed");
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({ error: resp.statusText }));
+        throw new Error(errBody.error || `请求失败 (${resp.status})`);
+      }
+      if (!resp.body) throw new Error("Stream body is empty");
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
