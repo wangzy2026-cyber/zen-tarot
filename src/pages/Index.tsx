@@ -65,15 +65,6 @@ const Index = () => {
     setReading("");
 
     try {
-      const response = await supabase.functions.invoke("tarot-reading", {
-        body: {
-          question,
-          cards: cards.map((c) => ({ name: c.name, nameCn: c.nameCn })),
-        },
-      });
-
-      // supabase.functions.invoke returns { data, error }
-      // For streaming, we need to use fetch directly
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tarot-reading`;
       const resp = await fetch(url, {
         method: "POST",
