@@ -25,60 +25,48 @@ const Index = () => {
 
   const allFlipped = cards.length > 0 && cards.every((c) => c.flipped);
 
-  // 注入：实时同步输入到全局变量作为备份
-  useEffect(() => {
-    const handleInput = (e: Event) => {
-      const target = e.target as HTMLInputElement | HTMLTextAreaElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-        (window as any).lastQuestion = target.value;
-      }
-    };
-    document.addEventListener('input', handleInput);
-    return () => document.removeEventListener('input', handleInput);
-  }, []);
-
   useEffect(() => {
     if (allFlipped && !streamTriggered.current && !isStreaming) {
       streamTriggered.current = true;
       streamReading();
     }
+    // 关键点：当所有牌翻开时，统一执行保存逻辑
     if (allFlipped && !savedToDb.current) {
       savedToDb.current = true;
       saveToHistory();
     }
   }, [allFlipped]);
 
-  // 修改：保存到数据库时，确保存入了 question
   const saveToHistory = async () => {
     const alias = getRandomCityAlias();
-    // 优先从 state 拿，拿不到从 localStorage 拿
-    const finalQuestion = question || localStorage.getItem('tarot_question') || "";
     
+    // 这里的 question 是直接从 useState 拿到的，绝对不会是空
     const rows = cards.map((c) => ({
       card_name: c.nameCn || c.name,
       is_reversed: c.reversed,
       spread_type: spread,
       position_label: c.position,
       city_alias: alias,
-      question: finalQuestion, // 写入问题
+      question: question.trim() || "未填写问题", 
       anonymous_id: 'explorer_' + Math.random().toString(36).substr(2, 4)
     }));
-    
+
+    console.log("正在打包上传馆藏数据...", rows);
     const { error } = await supabase.from("tarot_history").insert(rows);
-    if (error) console.error("保存历史失败:", error.message);
+    if (error) {
+      console.error("Supabase 写入失败:", error.message);
+    } else {
+      console.log("所有数据已成功存入后台！");
+    }
   };
 
   const streamReading = async () => {
     setIsStreaming(true);
     setReading("");
-
     try {
       const spreadInfo = SPREADS[spread];
       const cardsText = cards
-        .map(
-          (c, i) =>
-            `第${i + 1}张（${spreadInfo.positions[i]}）：${c.nameCn}（${c.name}）${c.reversed ? "【逆位】" : "【正位】"}`
-        )
+        .map((c, i) => `第${i + 1}张（${spreadInfo.positions[i]}）：${c.nameCn}${c.reversed ? "【逆位】" : "【正位】"}`)
         .join("；");
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tarot-reading`;
@@ -88,53 +76,31 @@ const Index = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({
-          question,
-          cards: cards.map((c) => ({
-            name: c.name,
-            nameCn: c.nameCn,
-            reversed: c.reversed,
-            position: c.position,
-          })),
-          spread,
-          cardsText,
-        }),
+        body: JSON.stringify({ question, cards, spread, cardsText }),
       });
 
-      if (!resp.ok) {
-        const errBody = await resp.json().catch(() => ({ error: resp.statusText }));
-        throw new Error(errBody.error || `请求失败 (${resp.status})`);
-      }
-      
-      if (!resp.body) throw new Error("Stream body is empty");
-
-      const reader = resp.body.getReader();
+      if (!resp.ok) throw new Error("AI 解读请求失败");
+      const reader = resp.body?.getReader();
       const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
+      while (reader) {
         const { done, value } = await reader.read();
         if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let newlineIdx: number;
-        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
-          let line = buffer.slice(0, newlineIdx);
-          buffer = buffer.slice(newlineIdx + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") break;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) setReading((prev) => prev + content);
-          } catch { }
+        const chunk = decoder.decode(value);
+        const lines = chunk.split("\n");
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const data = line.slice(6).trim();
+            if (data === "[DONE]") break;
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) setReading((prev) => prev + content);
+            } catch (e) {}
+          }
         }
       }
     } catch (e) {
-      console.error("AI reading error:", e);
-      setReading("星象迷离，暂时无法解读。请稍后再试。");
+      setReading("星象迷离，暂时无法解读。");
     } finally {
       setIsStreaming(false);
     }
@@ -142,10 +108,6 @@ const Index = () => {
 
   const handleBegin = () => {
     if (!question.trim()) return;
-    
-    // 关键点：切换页面前，先把问题存入硬盘缓存
-    localStorage.setItem('tarot_question', question);
-
     const info = SPREADS[spread];
     const drawn = drawCards(info.count).map((c, i) => ({
       ...c,
@@ -175,9 +137,6 @@ const Index = () => {
     setIsStreaming(false);
     streamTriggered.current = false;
     savedToDb.current = false;
-    // 重置缓存
-    localStorage.removeItem('tarot_question');
-    if (typeof window !== 'undefined') (window as any).lastQuestion = "";
   };
 
   return (
@@ -186,21 +145,10 @@ const Index = () => {
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-12 overflow-hidden">
         <AnimatePresence mode="wait">
           {phase === "input" && (
-            <motion.div
-              key="input"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.6 }}
-              className="flex flex-col items-center w-full max-w-md"
-            >
+            <motion.div key="input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex flex-col items-center w-full max-w-md">
               <Sparkles className="w-6 h-6 text-primary/40 mb-6" />
-              <h1 className="text-2xl md:text-3xl font-light text-primary mb-8 tracking-widest text-center">
-                塔罗启示
-              </h1>
-
+              <h1 className="text-2xl md:text-3xl font-light text-primary mb-8 tracking-widest text-center">塔罗启示</h1>
               <SpreadSelector value={spread} onChange={setSpread} />
-
               <input
                 type="text"
                 value={question}
@@ -209,87 +157,26 @@ const Index = () => {
                 placeholder="静心，输入你的困惑..."
                 className="w-full bg-transparent border-b border-primary/15 text-primary placeholder:text-muted-foreground text-center text-lg py-3 focus:outline-none focus:border-primary/40 transition-colors"
               />
-
               <div className="flex items-center gap-6 mt-10">
-                <button
-                  onClick={handleBegin}
-                  disabled={!question.trim()}
-                  className="px-8 py-3 border border-primary/25 text-primary/80 text-sm tracking-[0.3em] uppercase hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  开启启示
-                </button>
-                <button
-                  onClick={() => navigate("/chronicles")}
-                  className="flex items-center gap-1.5 text-muted-foreground/50 text-xs tracking-wider hover:text-primary/60 transition-colors"
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  馆藏
-                </button>
+                <button onClick={handleBegin} disabled={!question.trim()} className="px-8 py-3 border border-primary/25 text-primary/80 text-sm tracking-[0.3em] uppercase hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all disabled:opacity-30">开启启示</button>
+                <button onClick={() => navigate("/chronicles")} className="flex items-center gap-1.5 text-muted-foreground/50 text-xs hover:text-primary/60"><BookOpen className="w-3.5 h-3.5" />馆藏</button>
               </div>
             </motion.div>
           )}
-
           {phase === "cards" && (
-            <motion.div
-              key="cards"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.6 }}
-              className="flex flex-col items-center w-full max-w-4xl"
-            >
-              <p className="text-muted-foreground text-sm mb-8 tracking-widest">
-                {SPREADS[spread].label} · 逐一点击翻牌
-              </p>
-
-              <CardSpread
-                cards={cards}
-                spread={spread}
-                onFlip={handleFlip}
-                onImageLoad={handleImageLoad}
-              />
-
+            <motion.div key="cards" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center w-full max-w-4xl">
+              <p className="text-muted-foreground text-sm mb-8 tracking-widest">{SPREADS[spread].label} · 逐一点击翻牌</p>
+              <CardSpread cards={cards} spread={spread} onFlip={handleFlip} onImageLoad={handleImageLoad} />
               <AnimatePresence>
                 {allFlipped && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5, duration: 0.8 }}
-                    className="w-full max-w-lg border-t border-primary/10 pt-8 mt-10"
-                  >
-                    <h2 className="text-primary text-center text-sm tracking-[0.4em] uppercase mb-6">
-                      深度解析
-                    </h2>
-                    <div className="text-foreground/70 text-sm leading-relaxed whitespace-pre-line min-h-[3rem]">
-                      {reading || (
-                        <span className="text-muted-foreground animate-pulse">
-                          星象凝聚中...
-                        </span>
-                      )}
-                      {isStreaming && (
-                        <span className="inline-block w-px h-4 bg-primary/60 ml-0.5 animate-pulse" />
-                      )}
-                    </div>
+                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-lg border-t border-primary/10 pt-8 mt-10">
+                    <h2 className="text-primary text-center text-sm tracking-[0.4em] uppercase mb-6">深度解析</h2>
+                    <div className="text-foreground/70 text-sm leading-relaxed whitespace-pre-line min-h-[3rem]">{reading || <span className="text-muted-foreground animate-pulse">星象凝聚中...</span>}</div>
                   </motion.div>
                 )}
               </AnimatePresence>
-
-              {allFlipped && (
-                <ResonancePool
-                  currentCards={cards.map((c) => ({ name: c.name, nameCn: c.nameCn }))}
-                />
-              )}
-
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: allFlipped ? 1.2 : 0.8 }}
-                onClick={handleReset}
-                className="mt-12 flex items-center gap-2 text-muted-foreground text-xs tracking-widest hover:text-foreground transition-colors"
-              >
-                <RotateCcw className="w-3 h-3" />
-                清空并重新开始
-              </motion.button>
+              {allFlipped && <ResonancePool currentCards={cards.map((c) => ({ name: c.name, nameCn: c.nameCn }))} />}
+              <motion.button onClick={handleReset} className="mt-12 flex items-center gap-2 text-muted-foreground text-xs hover:text-foreground"><RotateCcw className="w-3 h-3" />清空并重新开始</motion.button>
             </motion.div>
           )}
         </AnimatePresence>
