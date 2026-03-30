@@ -1,14 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { RotateCcw, Sparkles } from "lucide-react";
+import { RotateCcw, Sparkles, BookOpen } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import Starfield from "@/components/Starfield";
 import SpreadSelector from "@/components/SpreadSelector";
 import CardSpread from "@/components/CardSpread";
+import ResonancePool from "@/components/ResonancePool";
 import { drawCards } from "@/data/tarotDeck";
 import { SpreadType, SPREADS, DrawnCard } from "@/types/tarot";
+import { supabase } from "@/integrations/supabase/client";
+import { getRandomCityAlias } from "@/utils/cityAlias";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [phase, setPhase] = useState<"input" | "cards">("input");
   const [question, setQuestion] = useState("");
   const [spread, setSpread] = useState<SpreadType>("trinity");
@@ -16,6 +21,7 @@ const Index = () => {
   const [reading, setReading] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const streamTriggered = useRef(false);
+  const savedToDb = useRef(false);
 
   const allFlipped = cards.length > 0 && cards.every((c) => c.flipped);
 
@@ -24,7 +30,24 @@ const Index = () => {
       streamTriggered.current = true;
       streamReading();
     }
+    if (allFlipped && !savedToDb.current) {
+      savedToDb.current = true;
+      saveToHistory();
+    }
   }, [allFlipped]);
+
+  const saveToHistory = async () => {
+    const alias = getRandomCityAlias();
+    const rows = cards.map((c) => ({
+      card_name: c.name,
+      card_name_cn: c.nameCn,
+      is_reversed: c.reversed,
+      spread_type: spread,
+      position_label: c.position,
+      city_alias: alias,
+    }));
+    await supabase.from("tarot_history").insert(rows);
+  };
 
   const streamReading = async () => {
     setIsStreaming(true);
@@ -54,7 +77,7 @@ const Index = () => {
             reversed: c.reversed,
             position: c.position,
           })),
-          spread: spread,
+          spread,
           cardsText,
         }),
       });
@@ -129,6 +152,7 @@ const Index = () => {
     setReading("");
     setIsStreaming(false);
     streamTriggered.current = false;
+    savedToDb.current = false;
   };
 
   return (
@@ -161,13 +185,22 @@ const Index = () => {
                 className="w-full bg-transparent border-b border-primary/15 text-primary placeholder:text-muted-foreground text-center text-lg py-3 focus:outline-none focus:border-primary/40 transition-colors"
               />
 
-              <button
-                onClick={handleBegin}
-                disabled={!question.trim()}
-                className="mt-10 px-8 py-3 border border-primary/25 text-primary/80 text-sm tracking-[0.3em] uppercase hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                开启启示
-              </button>
+              <div className="flex items-center gap-6 mt-10">
+                <button
+                  onClick={handleBegin}
+                  disabled={!question.trim()}
+                  className="px-8 py-3 border border-primary/25 text-primary/80 text-sm tracking-[0.3em] uppercase hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  开启启示
+                </button>
+                <button
+                  onClick={() => navigate("/chronicles")}
+                  className="flex items-center gap-1.5 text-muted-foreground/50 text-xs tracking-wider hover:text-primary/60 transition-colors"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  馆藏
+                </button>
+              </div>
             </motion.div>
           )}
 
@@ -215,6 +248,12 @@ const Index = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {allFlipped && (
+                <ResonancePool
+                  currentCards={cards.map((c) => ({ name: c.name, nameCn: c.nameCn }))}
+                />
+              )}
 
               <motion.button
                 initial={{ opacity: 0 }}
