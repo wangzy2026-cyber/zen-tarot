@@ -13,6 +13,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { getRandomCityAlias } from "@/utils/cityAlias";
 
 const Index = () => {
+  // --- 核心注入逻辑：实时同步输入框到全局变量 ---
+  useEffect(() => {
+    const handleInput = (e: Event) => {
+      const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+      // 只要是输入框或文本域，就实时同步给全局变量，绕过组件通信限制
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        (window as any).lastQuestion = target.value;
+      }
+    };
+    document.addEventListener('input', handleInput);
+    // 组件卸载时移除监听器，防止内存泄漏
+    return () => document.removeEventListener('input', handleInput);
+  }, []);
+  // ------------------------------------------
+
   const navigate = useNavigate();
   const [phase, setPhase] = useState<"input" | "cards">("input");
   const [question, setQuestion] = useState("");
@@ -153,6 +168,8 @@ const Index = () => {
     setIsStreaming(false);
     streamTriggered.current = false;
     savedToDb.current = false;
+    // 重置全局变量
+    if (typeof window !== 'undefined') (window as any).lastQuestion = "";
   };
 
   return (
