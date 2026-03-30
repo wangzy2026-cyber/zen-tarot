@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { DrawnCard } from "@/types/tarot";
+import { supabase } from "@/integrations/supabase/client"; // 关键导入：连接数据库
 
 const CardBack = () => (
   <div className="absolute inset-0 backface-hidden rounded-xl border border-primary/20 bg-secondary/80 backdrop-blur-sm flex items-center justify-center">
@@ -64,13 +65,42 @@ const TarotCard = ({ card, index, onFlip, onImageLoad, compact }: TarotCardProps
     ? "w-20 h-32 md:w-24 md:h-38"
     : "w-28 h-44 md:w-36 md:h-56";
 
+  // 定义翻牌并存入数据库的逻辑
+  const handleFlipAndSave = async () => {
+    if (card.flipped) return;
+
+    // 1. 先触发前端翻牌动画
+    onFlip(card.id);
+
+    // 2. 物理存入 Supabase 数据库
+    try {
+      console.log("正在同步赛博馆藏...", card.nameCn);
+      const { error } = await supabase
+        .from('tarot_history')
+        .insert([{ 
+          card_name: card.nameCn || card.name, 
+          is_reversed: card.reversed || false,
+          spread_type: card.position || 'single_draw',
+          anonymous_id: 'explorer_' + Math.random().toString(36).substr(2, 4) // 生成一个临时的匿名ID
+        }]);
+
+      if (error) {
+        console.error("数据库写入失败:", error.message);
+      } else {
+        console.log("数据已存入 Supabase！");
+      }
+    } catch (err) {
+      console.error("网络异常，数据未能存入:", err);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.15, duration: 0.5 }}
       className="perspective-1000 cursor-pointer"
-      onClick={() => !card.flipped && onFlip(card.id)}
+      onClick={handleFlipAndSave}
     >
       <motion.div
         animate={{
