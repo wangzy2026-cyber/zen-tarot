@@ -68,33 +68,34 @@ const TarotCard = ({ card, index, onFlip, onImageLoad, compact }: TarotCardProps
   const handleFlipAndSave = async () => {
     if (card.flipped) return;
 
-    // 1. 触发翻牌动画
+    // 1. 立即执行翻牌动画
     onFlip(card.id);
 
-    // 2. 抓取页面上的输入框内容
-    const questionInput = document.querySelector('input') as HTMLInputElement;
-    const userQuestion = questionInput?.value || "未填写问题";
+    // 2. 暴力抓取页面上的问题输入
+    // 兼容 textarea 和 input 两种情况
+    const inputElement = document.querySelector('textarea') || document.querySelector('input');
+    const userQuestion = (inputElement as HTMLInputElement)?.value || "未填写问题";
 
-    // 3. 存入数据库
+    // 3. 异步存入数据库
     try {
-      console.log("正在同步赛博馆藏与困惑...", card.nameCn);
+      console.log("正在同步星丛数据...", card.nameCn);
       const { error } = await supabase
         .from('tarot_history')
         .insert([{ 
           card_name: card.nameCn || card.name, 
           is_reversed: card.reversed || false,
           spread_type: card.position || 'single_draw',
-          question: userQuestion, // 存入问题
+          question: userQuestion, // 关键：存储问题
           anonymous_id: 'explorer_' + Math.random().toString(36).substr(2, 4)
         }]);
 
       if (error) {
-        console.error("数据库写入失败:", error.message);
+        console.error("Supabase 写入异常:", error.message);
       } else {
-        console.log("困惑已同步至星丛后台！");
+        console.log("同步成功，困惑已录入。");
       }
     } catch (err) {
-      console.error("同步失败:", err);
+      console.error("网络请求失败:", err);
     }
   };
 
