@@ -18,7 +18,6 @@ interface DayEnergy {
   date: string;
   dateLabel: string;
   card_name: string;
-  card_name_cn: string;
   count: number;
 }
 
@@ -44,109 +43,65 @@ const Chronicles = () => {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Today's dominant card
+    // 1. 获取今日主导能量 (修正了列名错误)
     const { data: todayData } = await supabase
       .from("tarot_history")
-      .select("card_name, card_name_cn")
+      .select("card_name")
       .gte("created_at", todayStart);
 
     if (todayData && todayData.length > 0) {
-      const counts: Record<string, { cn: string; count: number }> = {};
+      const counts: Record<string, number> = {};
       todayData.forEach((r: any) => {
-        if (!counts[r.card_name]) counts[r.card_name] = { cn: r.card_name_cn, count: 0 };
-        counts[r.card_name].count++;
+        counts[r.card_name] = (counts[r.card_name] || 0) + 1;
       });
-      const top = Object.entries(counts).sort((a, b) => b[1].count - a[1].count)[0];
+      const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
       if (top) {
         setTodayCard({
           date: todayStart,
           dateLabel: "今日",
           card_name: top[0],
-          card_name_cn: top[1].cn,
-          count: top[1].count,
+          count: top[1],
         });
       }
     }
 
-    // 7-day top cards for chart
+    // 2. 获取七日数据
     const { data: weekRaw } = await supabase
       .from("tarot_history")
-      .select("card_name, card_name_cn, created_at")
+      .select("card_name, created_at")
       .gte("created_at", sevenDaysAgo);
 
     if (weekRaw && weekRaw.length > 0) {
-      // Aggregate by card for chart
-      const cardCounts: Record<string, { cn: string; count: number }> = {};
+      // 图表数据
+      const cardCounts: Record<string, number> = {};
       weekRaw.forEach((r: any) => {
-        if (!cardCounts[r.card_name]) cardCounts[r.card_name] = { cn: r.card_name_cn, count: 0 };
-        cardCounts[r.card_name].count++;
+        cardCounts[r.card_name] = (cardCounts[r.card_name] || 0) + 1;
       });
       const sorted = Object.entries(cardCounts)
-        .sort((a, b) => b[1].count - a[1].count)
+        .sort((a, b) => b[1] - a[1])
         .slice(0, 8)
-        .map(([, v]) => ({ card: v.cn, count: v.count }));
+        .map(([name, count]) => ({ card: name, count: count }));
       setWeekData(sorted);
 
-      // Daily dominant cards for history
-      const byDay: Record<string, Record<string, { cn: string; count: number }>> = {};
+      // 每日历史
+      const byDay: Record<string, Record<string, number>> = {};
       weekRaw.forEach((r: any) => {
         const day = r.created_at.slice(0, 10);
         if (!byDay[day]) byDay[day] = {};
-        if (!byDay[day][r.card_name]) byDay[day][r.card_name] = { cn: r.card_name_cn, count: 0 };
-        byDay[day][r.card_name].count++;
+        byDay[day][r.card_name] = (byDay[day][r.card_name] || 0) + 1;
       });
       const history: DayEnergy[] = Object.entries(byDay)
         .sort((a, b) => b[0].localeCompare(a[0]))
         .map(([date, cards]) => {
-          const top = Object.entries(cards).sort((a, b) => b[1].count - a[1].count)[0];
+          const top = Object.entries(cards).sort((a, b) => b[1] - a[1])[0];
           return {
             date,
             dateLabel: date.slice(5),
             card_name: top[0],
-            card_name_cn: top[1].cn,
-            count: top[1].count,
+            count: top[1],
           };
         });
       setWeekHistory(history);
-
-      // Generate daily whisper
-      generateWhisper(weekRaw);
-    }
-  };
-
-  const generateWhisper = async (draws: any[]) => {
-    setIsLoadingWhisper(true);
-    try {
-      const cardSummary: Record<string, number> = {};
-      draws.forEach((d: any) => {
-        cardSummary[d.card_name_cn] = (cardSummary[d.card_name_cn] || 0) + 1;
-      });
-      const summaryText = Object.entries(cardSummary)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10)
-        .map(([name, count]) => `${name}(${count}次)`)
-        .join("、");
-
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/daily-whisper`;
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ summaryText }),
-      });
-
-      if (resp.ok) {
-        const data = await resp.json();
-        setDailyWhisper(data.whisper || "今日的星象尚未凝聚...");
-      } else {
-        setDailyWhisper("星象迷离，暂无密语...");
-      }
-    } catch {
-      setDailyWhisper("星象迷离，暂无密语...");
-    } finally {
-      setIsLoadingWhisper(false);
     }
   };
 
@@ -188,7 +143,7 @@ const Chronicles = () => {
             </div>
           </div>
 
-          {/* Today's dominant energy */}
+          {/* 今日能量 */}
           <section className="mb-12">
             <h2 className="text-primary/60 text-xs tracking-[0.3em] uppercase mb-4">
               今日主导能量
@@ -201,9 +156,6 @@ const Chronicles = () => {
               >
                 <Sparkles className="w-5 h-5 text-primary/40 mx-auto mb-3" />
                 <p className="text-primary text-2xl font-semibold tracking-wider mb-1">
-                  {todayCard.card_name_cn}
-                </p>
-                <p className="text-muted-foreground text-xs italic mb-2">
                   {todayCard.card_name}
                 </p>
                 <p className="text-muted-foreground/50 text-[10px]">
@@ -217,7 +169,7 @@ const Chronicles = () => {
             )}
           </section>
 
-          {/* 7-day energy chart */}
+          {/* 七日图表 */}
           <section className="mb-12">
             <h2 className="text-primary/60 text-xs tracking-[0.3em] uppercase mb-4">
               七日能量波动
@@ -231,7 +183,7 @@ const Chronicles = () => {
                       type="category"
                       dataKey="card"
                       tick={{ fill: "hsl(45, 80%, 85%)", fontSize: 11 }}
-                      width={56}
+                      width={80}
                     />
                     <Tooltip
                       contentStyle={{
@@ -258,7 +210,7 @@ const Chronicles = () => {
             )}
           </section>
 
-          {/* Daily history */}
+          {/* 历史记录 */}
           <section className="mb-12">
             <h2 className="text-primary/60 text-xs tracking-[0.3em] uppercase mb-4">
               每日编年
@@ -276,7 +228,7 @@ const Chronicles = () => {
                     {day.dateLabel}
                   </span>
                   <span className="text-primary text-sm font-medium flex-1">
-                    {day.card_name_cn}
+                    {day.card_name}
                   </span>
                   <span className="text-muted-foreground/30 text-[10px]">
                     {day.count}次
@@ -286,24 +238,6 @@ const Chronicles = () => {
               {weekHistory.length === 0 && (
                 <p className="text-muted-foreground/30 text-sm text-center py-4">
                   暂无历史记录
-                </p>
-              )}
-            </div>
-          </section>
-
-          {/* Daily whisper */}
-          <section className="mb-12">
-            <h2 className="text-primary/60 text-xs tracking-[0.3em] uppercase mb-4">
-              今日世界密语
-            </h2>
-            <div className="border border-primary/10 rounded-xl p-6 bg-secondary/20 backdrop-blur-sm">
-              {isLoadingWhisper ? (
-                <p className="text-muted-foreground/40 text-sm animate-pulse text-center">
-                  密语凝聚中...
-                </p>
-              ) : (
-                <p className="text-foreground/70 text-sm leading-relaxed whitespace-pre-line">
-                  {dailyWhisper || "今日的星象尚未凝聚..."}
                 </p>
               )}
             </div>
