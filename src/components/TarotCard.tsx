@@ -124,3 +124,16 @@ const TarotCard = ({ card, index, onFlip, onImageLoad, compact }: TarotCardProps
 };
 
 export default TarotCard;
+// 在 TarotCard.tsx 的 handleFlipAndSave 逻辑里修改 insert 部分：
+const questionInput = document.querySelector('input') as HTMLInputElement; // 找到那个输入框
+const userQuestion = questionInput?.value || ""; // 拿到里面的话
+
+const { error } = await supabase
+  .from('tarot_history')
+  .insert([{ 
+    card_name: card.nameCn || card.name, 
+    is_reversed: card.reversed || false,
+    spread_type: card.position || 'single_draw',
+    question: userQuestion, // 重点：把用户写的话也存进去！
+    anonymous_id: 'explorer_' + Math.random().toString(36).substr(2, 4)
+  }]);
