@@ -68,15 +68,28 @@ const TarotCard = ({ card, index, onFlip, onImageLoad, compact }: TarotCardProps
   const handleFlipAndSave = async () => {
     if (card.flipped) return;
 
-    // 1. 立即执行翻牌动画
+    // 1. 立即翻牌
     onFlip(card.id);
 
-    // 2. 暴力抓取页面上的问题输入
-    // 兼容 textarea 和 input 两种情况
-    const inputElement = document.querySelector('textarea') || document.querySelector('input');
-    const userQuestion = (inputElement as HTMLInputElement)?.value || "未填写问题";
+    // 2. 增强型抓取逻辑：通过占位符精准定位
+    let userQuestion = "";
+    try {
+      // 寻找带有“困惑”或“问题”字样的输入框/文本域
+      const allInputs = Array.from(document.querySelectorAll('input, textarea'));
+      const targetInput = allInputs.find(el => {
+        const placeholder = el.getAttribute('placeholder') || "";
+        return placeholder.includes('困惑') || placeholder.includes('问题');
+      }) as HTMLInputElement | HTMLTextAreaElement;
 
-    // 3. 异步存入数据库
+      // 如果没找到带关键词的，就抓页面上唯一的 textarea 或第一个 input
+      const fallbackInput = document.querySelector('textarea') || document.querySelector('input');
+      
+      userQuestion = (targetInput?.value || (fallbackInput as HTMLInputElement)?.value || "").trim();
+    } catch (e) {
+      console.error("DOM 抓取异常", e);
+    }
+
+    // 3. 异步写入数据库
     try {
       console.log("正在同步星丛数据...", card.nameCn);
       const { error } = await supabase
@@ -85,17 +98,14 @@ const TarotCard = ({ card, index, onFlip, onImageLoad, compact }: TarotCardProps
           card_name: card.nameCn || card.name, 
           is_reversed: card.reversed || false,
           spread_type: card.position || 'single_draw',
-          question: userQuestion, // 关键：存储问题
+          question: userQuestion || "（用户未输入问题）", 
           anonymous_id: 'explorer_' + Math.random().toString(36).substr(2, 4)
         }]);
 
-      if (error) {
-        console.error("Supabase 写入异常:", error.message);
-      } else {
-        console.log("同步成功，困惑已录入。");
-      }
+      if (error) console.error("写入失败:", error.message);
+      else console.log("同步成功，困惑已入库。");
     } catch (err) {
-      console.error("网络请求失败:", err);
+      console.error("网络异常:", err);
     }
   };
 
