@@ -33,16 +33,16 @@ const Index = () => {
     }
     if (allFlipped && !savedToDb.current) {
       savedToDb.current = true;
-      saveToHistory();
+      // 【修复】直接从 localStorage 读取，完全绕开闭包捕获旧 state 的问题
+      const q = localStorage.getItem("tarot_question") || question || "未填写问题";
+      saveToHistory(q);
     }
   }, [allFlipped]);
 
-  // 2. 核心保存函数：从缓存或 State 提取问题
-  const saveToHistory = async () => {
+  // 2. 核心保存函数：接收 questionText 参数，不再依赖闭包里的 state
+  const saveToHistory = async (questionText: string) => {
     const alias = getRandomCityAlias();
-    
-    // 【关键】：优先从当前 state 拿，拿不到就从浏览器硬盘 (localStorage) 拿
-    const finalQuestion = question.trim() || localStorage.getItem('tarot_question') || "未检测到有效输入";
+    const finalQuestion = questionText.trim() || "未填写问题";
 
     const rows = cards.map((c) => ({
       card_name: c.nameCn || c.name,
@@ -50,19 +50,19 @@ const Index = () => {
       spread_type: spread,
       position_label: c.position,
       city_alias: alias,
-      question: finalQuestion, // 这里必须对应数据库中的 question 字段
-      anonymous_id: 'explorer_' + Math.random().toString(36).substr(2, 4)
+      question: finalQuestion,
+      anonymous_id: "explorer_" + Math.random().toString(36).substr(2, 4),
     }));
 
     console.log("正在同步馆藏数据...", rows);
     const { error } = await supabase.from("tarot_history").insert(rows);
-    
+
     if (error) {
       console.error("数据库同步失败:", error.message);
     } else {
       console.log("同步成功！困惑已入库。");
       // 保存成功后清理缓存
-      localStorage.removeItem('tarot_question');
+      localStorage.removeItem("tarot_question");
     }
   };
 
@@ -72,7 +72,12 @@ const Index = () => {
     try {
       const spreadInfo = SPREADS[spread];
       const cardsText = cards
-        .map((c, i) => `第${i + 1}张（${spreadInfo.positions[i]}）：${c.nameCn}${c.reversed ? "【逆位】" : "【正位】"}`)
+        .map(
+          (c, i) =>
+            `第${i + 1}张（${spreadInfo.positions[i]}）：${c.nameCn}${
+              c.reversed ? "【逆位】" : "【正位】"
+            }`
+        )
         .join("；");
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tarot-reading`;
@@ -114,9 +119,9 @@ const Index = () => {
 
   const handleBegin = () => {
     if (!question.trim()) return;
-    
-    // 【核心注入】：在切换到抽牌页之前，把问题锁进“硬盘”
-    localStorage.setItem('tarot_question', question);
+
+    // 【核心注入】：在切换到抽牌页之前，把问题锁进 localStorage
+    localStorage.setItem("tarot_question", question);
 
     const info = SPREADS[spread];
     const drawn = drawCards(info.count).map((c, i) => ({
@@ -132,11 +137,15 @@ const Index = () => {
   };
 
   const handleFlip = (id: number) => {
-    setCards((prev) => prev.map((c) => (c.id === id ? { ...c, flipped: true } : c)));
+    setCards((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, flipped: true } : c))
+    );
   };
 
   const handleImageLoad = (id: number) => {
-    setCards((prev) => prev.map((c) => (c.id === id ? { ...c, loaded: true } : c)));
+    setCards((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, loaded: true } : c))
+    );
   };
 
   const handleReset = () => {
@@ -147,7 +156,7 @@ const Index = () => {
     setIsStreaming(false);
     streamTriggered.current = false;
     savedToDb.current = false;
-    localStorage.removeItem('tarot_question');
+    localStorage.removeItem("tarot_question");
   };
 
   return (
@@ -156,9 +165,18 @@ const Index = () => {
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-12 overflow-hidden">
         <AnimatePresence mode="wait">
           {phase === "input" && (
-            <motion.div key="input" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.6 }} className="flex flex-col items-center w-full max-w-md">
+            <motion.div
+              key="input"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.6 }}
+              className="flex flex-col items-center w-full max-w-md"
+            >
               <Sparkles className="w-6 h-6 text-primary/40 mb-6" />
-              <h1 className="text-2xl md:text-3xl font-light text-primary mb-8 tracking-widest text-center">塔罗启示</h1>
+              <h1 className="text-2xl md:text-3xl font-light text-primary mb-8 tracking-widest text-center">
+                塔罗启示
+              </h1>
               <SpreadSelector value={spread} onChange={setSpread} />
               <input
                 type="text"
@@ -169,26 +187,78 @@ const Index = () => {
                 className="w-full bg-transparent border-b border-primary/15 text-primary placeholder:text-muted-foreground text-center text-lg py-3 focus:outline-none focus:border-primary/40 transition-colors"
               />
               <div className="flex items-center gap-6 mt-10">
-                <button onClick={handleBegin} disabled={!question.trim()} className="px-8 py-3 border border-primary/25 text-primary/80 text-sm tracking-[0.3em] uppercase hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all duration-300 disabled:opacity-30">开启启示</button>
-                <button onClick={() => navigate("/chronicles")} className="flex items-center gap-1.5 text-muted-foreground/50 text-xs tracking-wider hover:text-primary/60 transition-colors"><BookOpen className="w-3.5 h-3.5" />馆藏</button>
+                <button
+                  onClick={handleBegin}
+                  disabled={!question.trim()}
+                  className="px-8 py-3 border border-primary/25 text-primary/80 text-sm tracking-[0.3em] uppercase hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all duration-300 disabled:opacity-30"
+                >
+                  开启启示
+                </button>
+                <button
+                  onClick={() => navigate("/chronicles")}
+                  className="flex items-center gap-1.5 text-muted-foreground/50 text-xs tracking-wider hover:text-primary/60 transition-colors"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  馆藏
+                </button>
               </div>
             </motion.div>
           )}
 
           {phase === "cards" && (
-            <motion.div key="cards" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }} className="flex flex-col items-center w-full max-w-4xl">
-              <p className="text-muted-foreground text-sm mb-8 tracking-widest">{SPREADS[spread].label} · 逐一点击翻牌</p>
-              <CardSpread cards={cards} spread={spread} onFlip={handleFlip} onImageLoad={handleImageLoad} />
+            <motion.div
+              key="cards"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6 }}
+              className="flex flex-col items-center w-full max-w-4xl"
+            >
+              <p className="text-muted-foreground text-sm mb-8 tracking-widest">
+                {SPREADS[spread].label} · 逐一点击翻牌
+              </p>
+              <CardSpread
+                cards={cards}
+                spread={spread}
+                onFlip={handleFlip}
+                onImageLoad={handleImageLoad}
+              />
               <AnimatePresence>
                 {allFlipped && (
-                  <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.8 }} className="w-full max-w-lg border-t border-primary/10 pt-8 mt-10">
-                    <h2 className="text-primary text-center text-sm tracking-[0.4em] uppercase mb-6">深度解析</h2>
-                    <div className="text-foreground/70 text-sm leading-relaxed whitespace-pre-line min-h-[3rem]">{reading || <span className="text-muted-foreground animate-pulse">星象凝聚中...</span>}</div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5, duration: 0.8 }}
+                    className="w-full max-w-lg border-t border-primary/10 pt-8 mt-10"
+                  >
+                    <h2 className="text-primary text-center text-sm tracking-[0.4em] uppercase mb-6">
+                      深度解析
+                    </h2>
+                    <div className="text-foreground/70 text-sm leading-relaxed whitespace-pre-line min-h-[3rem]">
+                      {reading || (
+                        <span className="text-muted-foreground animate-pulse">
+                          星象凝聚中...
+                        </span>
+                      )}
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-              {allFlipped && <ResonancePool currentCards={cards.map((c) => ({ name: c.name, nameCn: c.nameCn }))} />}
-              <motion.button onClick={handleReset} className="mt-12 flex items-center gap-2 text-muted-foreground text-xs tracking-widest hover:text-foreground transition-colors"><RotateCcw className="w-3 h-3" />清空并重新开始</motion.button>
+              {allFlipped && (
+                <ResonancePool
+                  currentCards={cards.map((c) => ({
+                    name: c.name,
+                    nameCn: c.nameCn,
+                  }))}
+                />
+              )}
+              <motion.button
+                onClick={handleReset}
+                className="mt-12 flex items-center gap-2 text-muted-foreground text-xs tracking-widest hover:text-foreground transition-colors"
+              >
+                <RotateCcw className="w-3 h-3" />
+                清空并重新开始
+              </motion.button>
             </motion.div>
           )}
         </AnimatePresence>
