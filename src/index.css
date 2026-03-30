@@ -186,3 +186,26 @@ All colors MUST be HSL.
   animation: twinkle var(--duration, 4s) ease-in-out infinite;
   animation-delay: var(--delay, 0s);
 }
+
+/* Resonance breathing effects */
+@keyframes resonance-breathe {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+.resonance-glow {
+  animation: resonance-breathe 3s ease-in-out infinite;
+  text-shadow: 0 0 8px hsl(var(--primary) / 0.3);
+}
+
+.resonance-dot {
+  animation: resonance-breathe 2.5s ease-in-out infinite;
+}
+
+.resonance-item {
+  transition: all 0.3s ease;
+}
+.resonance-item:hover {
+  background: hsl(var(--secondary) / 0.6);
+  border-color: hsl(var(--primary) / 0.15);
+}

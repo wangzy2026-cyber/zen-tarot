@@ -14,7 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      tarot_history: {
+        Row: {
+          card_name: string
+          card_name_cn: string
+          city_alias: string | null
+          created_at: string
+          id: string
+          is_reversed: boolean
+          position_label: string | null
+          spread_type: string
+        }
+        Insert: {
+          card_name: string
+          card_name_cn: string
+          city_alias?: string | null
+          created_at?: string
+          id?: string
+          is_reversed?: boolean
+          position_label?: string | null
+          spread_type?: string
+        }
+        Update: {
+          card_name?: string
+          card_name_cn?: string
+          city_alias?: string | null
+          created_at?: string
+          id?: string
+          is_reversed?: boolean
+          position_label?: string | null
+          spread_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
