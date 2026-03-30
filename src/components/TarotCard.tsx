@@ -14,88 +14,54 @@ const CardBack = () => (
   </div>
 );
 
-const CardFront = ({
-  card,
-  onLoad,
-}: {
-  card: DrawnCard;
-  onLoad: () => void;
-}) => (
+const CardFront = ({ card, onLoad }: { card: DrawnCard; onLoad: () => void; }) => (
   <div className="absolute inset-0 backface-hidden rotate-y-180 rounded-xl border border-primary/30 bg-secondary/80 backdrop-blur-sm flex flex-col items-center justify-center p-2 shadow-[0_0_30px_-5px_hsl(45_90%_76%/0.15)] overflow-hidden">
     <div className="w-full flex-1 rounded-lg overflow-hidden flex items-center justify-center mb-1 relative">
       <img
         src={card.image}
         alt={card.name}
         onLoad={onLoad}
-        className={`w-full h-full object-contain transition-opacity duration-700 ${
-          card.loaded ? "opacity-100" : "opacity-0"
-        } ${card.reversed ? "rotate-180" : ""}`}
+        className={`w-full h-full object-contain transition-opacity duration-700 ${card.loaded ? "opacity-100" : "opacity-0"} ${card.reversed ? "rotate-180" : ""}`}
       />
-      {!card.loaded && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Sparkles className="w-6 h-6 text-primary/30 animate-pulse" />
-        </div>
-      )}
     </div>
-    <p className="text-primary text-xs md:text-sm font-semibold tracking-wider">
-      {card.nameCn}
-    </p>
+    <p className="text-primary text-xs md:text-sm font-semibold tracking-wider">{card.nameCn}</p>
     <p className="text-muted-foreground text-[10px] italic">{card.name}</p>
-    {card.reversed && (
-      <span className="text-destructive text-[10px] font-bold mt-0.5 tracking-wider">
-        【逆位】
-      </span>
-    )}
-    <span className="text-muted-foreground/50 text-[9px] mt-0.5">
-      {card.position}
-    </span>
+    {card.reversed && <span className="text-destructive text-[10px] font-bold mt-0.5 tracking-wider">【逆位】</span>}
+    <span className="text-muted-foreground/50 text-[9px] mt-0.5">{card.position}</span>
   </div>
 );
 
-interface TarotCardProps {
-  card: DrawnCard;
-  index: number;
-  onFlip: (id: number) => void;
-  onImageLoad: (id: number) => void;
-  compact?: boolean;
-}
-
-const TarotCard = ({ card, index, onFlip, onImageLoad, compact }: TarotCardProps) => {
-  const sizeClass = compact
-    ? "w-20 h-32 md:w-24 md:h-38"
-    : "w-28 h-44 md:w-36 md:h-56";
+const TarotCard = ({ card, index, onFlip, onImageLoad, compact }: any) => {
+  const sizeClass = compact ? "w-20 h-32 md:w-24 md:h-38" : "w-28 h-44 md:w-36 md:h-56";
 
   const handleFlipAndSave = async () => {
     if (card.flipped) return;
-
-    // 1. 执行翻牌动画
     onFlip(card.id);
 
-    // 2. 从全局变量读取问题（Index.tsx 里的监听器会不断更新它）
-    const userQuestion = (window as any).lastQuestion || "";
+    // 【多重抓取逻辑】
+    // 1. 优先从浏览器硬盘 (localStorage) 拿，这是最稳的
+    let userQuestion = localStorage.getItem('tarot_question') || "";
+    
+    // 2. 如果硬盘没有，看内存 (window)
+    if (!userQuestion) userQuestion = (window as any).lastQuestion || "";
+    
+    // 3. 如果还是没有，最后尝试搜一下 DOM
+    if (!userQuestion) {
+      const el = document.querySelector('input') || document.querySelector('textarea');
+      userQuestion = (el as HTMLInputElement)?.value || "";
+    }
 
-    // 3. 写入 Supabase
     try {
-      console.log("正在同步馆藏与问题...", card.nameCn);
-      const { error } = await supabase
-        .from('tarot_history')
-        .insert([{ 
-          card_name: card.nameCn || card.name, 
-          is_reversed: card.reversed || false,
-          spread_type: card.position || 'single_draw',
-          question: userQuestion.trim() || "（用户未输入问题）", 
-          anonymous_id: 'explorer_' + Math.random().toString(36).substr(2, 4)
-        }]);
-
-      if (error) {
-        console.error("写入报错:", error.message);
-      } else {
-        console.log("数据同步成功！内容：", userQuestion);
-        // 存完后可以清空全局变量，防止下一次干扰
-        (window as any).lastQuestion = "";
-      }
+      await supabase.from('tarot_history').insert([{ 
+        card_name: card.nameCn || card.name, 
+        is_reversed: card.reversed || false,
+        spread_type: card.position || 'single_draw',
+        question: userQuestion.trim() || "（未检测到输入）",
+        anonymous_id: 'explorer_' + Math.random().toString(36).substr(2, 4)
+      }]);
+      console.log("数据同步成功，问题已存入硬盘备份。");
     } catch (err) {
-      console.error("网络异常:", err);
+      console.error("同步失败:", err);
     }
   };
 
@@ -108,17 +74,8 @@ const TarotCard = ({ card, index, onFlip, onImageLoad, compact }: TarotCardProps
       onClick={handleFlipAndSave}
     >
       <motion.div
-        animate={{
-          rotateY: card.flipped ? 180 : 0,
-          scale: card.flipped ? 1 : 1,
-        }}
-        whileHover={!card.flipped ? { scale: 1.05, y: -4 } : {}}
+        animate={{ rotateY: card.flipped ? 180 : 0 }}
         transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-        style={{
-          boxShadow: card.flipped
-            ? "0 8px 32px -8px hsl(45 90% 76% / 0.12)"
-            : "0 4px 16px -4px rgba(0,0,0,0.3)",
-        }}
         className={`relative ${sizeClass} preserve-3d rounded-xl`}
       >
         <CardBack />
