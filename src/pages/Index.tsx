@@ -13,21 +13,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { getRandomCityAlias } from "@/utils/cityAlias";
 
 const Index = () => {
-  // --- 核心注入逻辑：实时同步输入框到全局变量 ---
-  useEffect(() => {
-    const handleInput = (e: Event) => {
-      const target = e.target as HTMLInputElement | HTMLTextAreaElement;
-      // 只要是输入框或文本域，就实时同步给全局变量，绕过组件通信限制
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-        (window as any).lastQuestion = target.value;
-      }
-    };
-    document.addEventListener('input', handleInput);
-    // 组件卸载时移除监听器，防止内存泄漏
-    return () => document.removeEventListener('input', handleInput);
-  }, []);
-  // ------------------------------------------
-
   const navigate = useNavigate();
   const [phase, setPhase] = useState<"input" | "cards">("input");
   const [question, setQuestion] = useState("");
@@ -40,6 +25,18 @@ const Index = () => {
 
   const allFlipped = cards.length > 0 && cards.every((c) => c.flipped);
 
+  // 注入：实时同步输入到全局变量作为备份
+  useEffect(() => {
+    const handleInput = (e: Event) => {
+      const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        (window as any).lastQuestion = target.value;
+      }
+    };
+    document.addEventListener('input', handleInput);
+    return () => document.removeEventListener('input', handleInput);
+  }, []);
+
   useEffect(() => {
     if (allFlipped && !streamTriggered.current && !isStreaming) {
       streamTriggered.current = true;
@@ -51,17 +48,24 @@ const Index = () => {
     }
   }, [allFlipped]);
 
+  // 修改：保存到数据库时，确保存入了 question
   const saveToHistory = async () => {
     const alias = getRandomCityAlias();
+    // 优先从 state 拿，拿不到从 localStorage 拿
+    const finalQuestion = question || localStorage.getItem('tarot_question') || "";
+    
     const rows = cards.map((c) => ({
-      card_name: c.name,
-      card_name_cn: c.nameCn,
+      card_name: c.nameCn || c.name,
       is_reversed: c.reversed,
       spread_type: spread,
       position_label: c.position,
       city_alias: alias,
+      question: finalQuestion, // 写入问题
+      anonymous_id: 'explorer_' + Math.random().toString(36).substr(2, 4)
     }));
-    await supabase.from("tarot_history").insert(rows);
+    
+    const { error } = await supabase.from("tarot_history").insert(rows);
+    if (error) console.error("保存历史失败:", error.message);
   };
 
   const streamReading = async () => {
@@ -101,6 +105,7 @@ const Index = () => {
         const errBody = await resp.json().catch(() => ({ error: resp.statusText }));
         throw new Error(errBody.error || `请求失败 (${resp.status})`);
       }
+      
       if (!resp.body) throw new Error("Stream body is empty");
 
       const reader = resp.body.getReader();
@@ -124,9 +129,7 @@ const Index = () => {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content;
             if (content) setReading((prev) => prev + content);
-          } catch {
-            // partial JSON
-          }
+          } catch { }
         }
       }
     } catch (e) {
@@ -139,6 +142,10 @@ const Index = () => {
 
   const handleBegin = () => {
     if (!question.trim()) return;
+    
+    // 关键点：切换页面前，先把问题存入硬盘缓存
+    localStorage.setItem('tarot_question', question);
+
     const info = SPREADS[spread];
     const drawn = drawCards(info.count).map((c, i) => ({
       ...c,
@@ -168,7 +175,8 @@ const Index = () => {
     setIsStreaming(false);
     streamTriggered.current = false;
     savedToDb.current = false;
-    // 重置全局变量
+    // 重置缓存
+    localStorage.removeItem('tarot_question');
     if (typeof window !== 'undefined') (window as any).lastQuestion = "";
   };
 
