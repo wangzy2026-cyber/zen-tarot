@@ -1,9 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-// 这是你的 Supabase 项目地址
+// 这里的 URL 必须非常干净，不能有末尾的斜杠
 const supabaseUrl = 'https://ybragvmvirddqfotqxig.supabase.co'; 
 
-// 把下面引号里的内容替换为你刚才复制的那串 sb_publishable_... 字符串
-const supabaseAnonKey = '这里填入你刚才复制的长字符串'; 
+// 重点：请务必确保引号里只有那一串 sb_publishable... 开头的字母和数字，没有任何空格！
+const supabaseAnonKey = '这里填入你复制的那串Key'; 
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
