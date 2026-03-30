@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { DrawnCard } from "@/types/tarot";
-import { supabase } from "@/integrations/supabase/client"; // 关键导入：连接数据库
+import { supabase } from "@/integrations/supabase/client";
 
 const CardBack = () => (
   <div className="absolute inset-0 backface-hidden rounded-xl border border-primary/20 bg-secondary/80 backdrop-blur-sm flex items-center justify-center">
@@ -65,32 +65,36 @@ const TarotCard = ({ card, index, onFlip, onImageLoad, compact }: TarotCardProps
     ? "w-20 h-32 md:w-24 md:h-38"
     : "w-28 h-44 md:w-36 md:h-56";
 
-  // 定义翻牌并存入数据库的逻辑
   const handleFlipAndSave = async () => {
     if (card.flipped) return;
 
-    // 1. 先触发前端翻牌动画
+    // 1. 触发翻牌动画
     onFlip(card.id);
 
-    // 2. 物理存入 Supabase 数据库
+    // 2. 抓取页面上的输入框内容
+    const questionInput = document.querySelector('input') as HTMLInputElement;
+    const userQuestion = questionInput?.value || "未填写问题";
+
+    // 3. 存入数据库
     try {
-      console.log("正在同步赛博馆藏...", card.nameCn);
+      console.log("正在同步赛博馆藏与困惑...", card.nameCn);
       const { error } = await supabase
         .from('tarot_history')
         .insert([{ 
           card_name: card.nameCn || card.name, 
           is_reversed: card.reversed || false,
           spread_type: card.position || 'single_draw',
-          anonymous_id: 'explorer_' + Math.random().toString(36).substr(2, 4) // 生成一个临时的匿名ID
+          question: userQuestion, // 存入问题
+          anonymous_id: 'explorer_' + Math.random().toString(36).substr(2, 4)
         }]);
 
       if (error) {
         console.error("数据库写入失败:", error.message);
       } else {
-        console.log("数据已存入 Supabase！");
+        console.log("困惑已同步至星丛后台！");
       }
     } catch (err) {
-      console.error("网络异常，数据未能存入:", err);
+      console.error("同步失败:", err);
     }
   };
 
@@ -124,16 +128,3 @@ const TarotCard = ({ card, index, onFlip, onImageLoad, compact }: TarotCardProps
 };
 
 export default TarotCard;
-// 在 TarotCard.tsx 的 handleFlipAndSave 逻辑里修改 insert 部分：
-const questionInput = document.querySelector('input') as HTMLInputElement; // 找到那个输入框
-const userQuestion = questionInput?.value || ""; // 拿到里面的话
-
-const { error } = await supabase
-  .from('tarot_history')
-  .insert([{ 
-    card_name: card.nameCn || card.name, 
-    is_reversed: card.reversed || false,
-    spread_type: card.position || 'single_draw',
-    question: userQuestion, // 重点：把用户写的话也存进去！
-    anonymous_id: 'explorer_' + Math.random().toString(36).substr(2, 4)
-  }]);
