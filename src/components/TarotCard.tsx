@@ -68,42 +68,32 @@ const TarotCard = ({ card, index, onFlip, onImageLoad, compact }: TarotCardProps
   const handleFlipAndSave = async () => {
     if (card.flipped) return;
 
-    // 1. 立即翻牌
+    // 1. 执行翻牌动画
     onFlip(card.id);
 
-    // 2. 增强型抓取逻辑：通过占位符精准定位
-    let userQuestion = "";
-    try {
-      // 寻找带有“困惑”或“问题”字样的输入框/文本域
-      const allInputs = Array.from(document.querySelectorAll('input, textarea'));
-      const targetInput = allInputs.find(el => {
-        const placeholder = el.getAttribute('placeholder') || "";
-        return placeholder.includes('困惑') || placeholder.includes('问题');
-      }) as HTMLInputElement | HTMLTextAreaElement;
+    // 2. 从全局变量读取问题（Index.tsx 里的监听器会不断更新它）
+    const userQuestion = (window as any).lastQuestion || "";
 
-      // 如果没找到带关键词的，就抓页面上唯一的 textarea 或第一个 input
-      const fallbackInput = document.querySelector('textarea') || document.querySelector('input');
-      
-      userQuestion = (targetInput?.value || (fallbackInput as HTMLInputElement)?.value || "").trim();
-    } catch (e) {
-      console.error("DOM 抓取异常", e);
-    }
-
-    // 3. 异步写入数据库
+    // 3. 写入 Supabase
     try {
-      console.log("正在同步星丛数据...", card.nameCn);
+      console.log("正在同步馆藏与问题...", card.nameCn);
       const { error } = await supabase
         .from('tarot_history')
         .insert([{ 
           card_name: card.nameCn || card.name, 
           is_reversed: card.reversed || false,
           spread_type: card.position || 'single_draw',
-          question: userQuestion || "（用户未输入问题）", 
+          question: userQuestion.trim() || "（用户未输入问题）", 
           anonymous_id: 'explorer_' + Math.random().toString(36).substr(2, 4)
         }]);
 
-      if (error) console.error("写入失败:", error.message);
-      else console.log("同步成功，困惑已入库。");
+      if (error) {
+        console.error("写入报错:", error.message);
+      } else {
+        console.log("数据同步成功！内容：", userQuestion);
+        // 存完后可以清空全局变量，防止下一次干扰
+        (window as any).lastQuestion = "";
+      }
     } catch (err) {
       console.error("网络异常:", err);
     }
