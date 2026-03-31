@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { track } from "@vercel/analytics";
 import { motion, AnimatePresence } from "framer-motion";
 import { RotateCcw, Sparkles, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
