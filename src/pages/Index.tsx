@@ -3,6 +3,8 @@ import { track } from "@vercel/analytics";
 import { motion, AnimatePresence } from "framer-motion";
 import { RotateCcw, Sparkles, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 import Starfield from "@/components/Starfield";
 import SpreadSelector from "@/components/SpreadSelector";
