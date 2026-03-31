@@ -65,9 +65,6 @@ const Index = () => {
       track("complete_tarot_draw");
       localStorage.removeItem("tarot_question");
     }
-      // 保存成功后清理缓存
-      localStorage.removeItem("tarot_question");
-    }
   };
 
   const streamReading = async () => {
