@@ -17,7 +17,8 @@ import { getRandomCityAlias } from "@/utils/cityAlias";
 
 const Index = () => {
   const navigate = useNavigate();
-  const [phase, setPhase] = useState<"input" | "cards">("input");
+  const [phase, setPhase] = useState<"input" | "cards" | "shuffling">("input");
+  const [manualMode, setManualMode] = useState(false);
   const [question, setQuestion] = useState("");
   const [spread, setSpread] = useState<SpreadType>("trinity");
   const [cards, setCards] = useState<DrawnCard[]>([]);
