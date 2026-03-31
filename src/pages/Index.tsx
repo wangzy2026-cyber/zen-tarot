@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { track } from "@vercel/analytics";
 import { motion, AnimatePresence } from "framer-motion";
 import { RotateCcw, Sparkles, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -61,6 +62,9 @@ const Index = () => {
       console.error("数据库同步失败:", error.message);
     } else {
       console.log("同步成功！困惑已入库。");
+      track("complete_tarot_draw");
+      localStorage.removeItem("tarot_question");
+    }
       // 保存成功后清理缓存
       localStorage.removeItem("tarot_question");
     }
@@ -119,6 +123,8 @@ const Index = () => {
 
   const handleBegin = () => {
     if (!question.trim()) return;
+
+    track("start_tarot_draw");
 
     // 【核心注入】：在切换到抽牌页之前，把问题锁进 localStorage
     localStorage.setItem("tarot_question", question);
