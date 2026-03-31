@@ -190,6 +190,19 @@ const Index = () => {
                 塔罗启示
               </h1>
               <SpreadSelector value={spread} onChange={setSpread} />
+              <div className="flex items-center gap-2.5 mb-6 mt-2">
+                <Switch
+                  id="manual-mode"
+                  checked={manualMode}
+                  onCheckedChange={setManualMode}
+                />
+                <Label
+                  htmlFor="manual-mode"
+                  className="text-muted-foreground text-xs tracking-wider cursor-pointer"
+                >
+                  开启手动抽牌模式（增强仪式感）
+                </Label>
+              </div>
               <input
                 type="text"
                 value={question}
