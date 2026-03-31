@@ -3,6 +3,8 @@ import { track } from "@vercel/analytics";
 import { motion, AnimatePresence } from "framer-motion";
 import { RotateCcw, Sparkles, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 import Starfield from "@/components/Starfield";
 import SpreadSelector from "@/components/SpreadSelector";
@@ -15,7 +17,8 @@ import { getRandomCityAlias } from "@/utils/cityAlias";
 
 const Index = () => {
   const navigate = useNavigate();
-  const [phase, setPhase] = useState<"input" | "cards">("input");
+  const [phase, setPhase] = useState<"input" | "cards" | "shuffling">("input");
+  const [manualMode, setManualMode] = useState(false);
   const [question, setQuestion] = useState("");
   const [spread, setSpread] = useState<SpreadType>("trinity");
   const [cards, setCards] = useState<DrawnCard[]>([]);
@@ -136,7 +139,13 @@ const Index = () => {
       position: info.positions[i],
     }));
     setCards(drawn);
-    setPhase("cards");
+
+    if (manualMode) {
+      setPhase("shuffling");
+      setTimeout(() => setPhase("cards"), 1800);
+    } else {
+      setPhase("cards");
+    }
   };
 
   const handleFlip = (id: number) => {
@@ -181,6 +190,19 @@ const Index = () => {
                 塔罗启示
               </h1>
               <SpreadSelector value={spread} onChange={setSpread} />
+              <div className="flex items-center gap-2.5 mb-6 mt-2">
+                <Switch
+                  id="manual-mode"
+                  checked={manualMode}
+                  onCheckedChange={setManualMode}
+                />
+                <Label
+                  htmlFor="manual-mode"
+                  className="text-muted-foreground text-xs tracking-wider cursor-pointer"
+                >
+                  开启手动抽牌模式（增强仪式感）
+                </Label>
+              </div>
               <input
                 type="text"
                 value={question}
@@ -205,6 +227,27 @@ const Index = () => {
                   馆藏
                 </button>
               </div>
+            </motion.div>
+          )}
+
+          {phase === "shuffling" && (
+            <motion.div
+              key="shuffling"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.5 }}
+              className="flex flex-col items-center gap-6"
+            >
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 5, -5, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Sparkles className="w-10 h-10 text-primary/60" />
+              </motion.div>
+              <p className="text-primary/70 text-sm tracking-[0.3em] animate-pulse">
+                洗牌中...
+              </p>
             </motion.div>
           )}
 

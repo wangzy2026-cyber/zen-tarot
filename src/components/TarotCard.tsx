@@ -37,9 +37,15 @@ const TarotCard = ({ card, index, onFlip, onImageLoad, compact }: any) => {
       transition={{ delay: index * 0.1, duration: 0.5 }}
       className="perspective-1000 cursor-pointer"
       onClick={() => !card.flipped && onFlip(card.id)}
+      whileHover={!card.flipped ? { scale: 1.08, y: -6 } : {}}
     >
       <motion.div
-        animate={{ rotateY: card.flipped ? 180 : 0 }}
+        animate={{
+          rotateY: card.flipped ? 180 : 0,
+          boxShadow: card.flipped
+            ? "0 8px 30px -8px hsl(var(--primary) / 0.25)"
+            : "0 4px 12px -4px hsl(var(--primary) / 0.1)",
+        }}
         transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
         className={`relative ${sizeClass} preserve-3d rounded-xl`}
       >
