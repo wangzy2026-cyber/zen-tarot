@@ -139,7 +139,13 @@ const Index = () => {
       position: info.positions[i],
     }));
     setCards(drawn);
-    setPhase("cards");
+
+    if (manualMode) {
+      setPhase("shuffling");
+      setTimeout(() => setPhase("cards"), 1800);
+    } else {
+      setPhase("cards");
+    }
   };
 
   const handleFlip = (id: number) => {
