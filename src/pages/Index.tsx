@@ -230,6 +230,27 @@ const Index = () => {
             </motion.div>
           )}
 
+          {phase === "shuffling" && (
+            <motion.div
+              key="shuffling"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.5 }}
+              className="flex flex-col items-center gap-6"
+            >
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 5, -5, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Sparkles className="w-10 h-10 text-primary/60" />
+              </motion.div>
+              <p className="text-primary/70 text-sm tracking-[0.3em] animate-pulse">
+                洗牌中...
+              </p>
+            </motion.div>
+          )}
+
           {phase === "cards" && (
             <motion.div
               key="cards"
