@@ -121,6 +121,8 @@ const Index = () => {
   const handleBegin = () => {
     if (!question.trim()) return;
 
+    track("start_tarot_draw");
+
     // 【核心注入】：在切换到抽牌页之前，把问题锁进 localStorage
     localStorage.setItem("tarot_question", question);
 
