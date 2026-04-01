@@ -16,6 +16,7 @@ import { drawCards } from "@/data/tarotDeck";
 import { SpreadType, SPREADS, DrawnCard } from "@/types/tarot";
 import { supabase } from "@/integrations/supabase/client";
 import { getRandomCityAlias } from "@/utils/cityAlias";
+import { getOrCreateUserId } from "@/utils/userId";
 
 const Index = () => {
   const navigate = useNavigate();
