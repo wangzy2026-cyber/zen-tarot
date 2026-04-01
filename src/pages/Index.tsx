@@ -53,7 +53,6 @@ const Index = () => {
     const userId = getOrCreateUserId();
     const rows = cards.map((c) => ({
       card_name: c.nameCn || c.name,
-      card_name_cn: c.nameCn || c.name,
       is_reversed: c.reversed,
       spread_type: spread,
       position_label: c.position,
@@ -62,7 +61,7 @@ const Index = () => {
       reading_id: rid,
       is_manual_mode: manualMode,
       click_donate: false,
-      user_id: userId,
+      anonymous_id: userId,
     }));
 
     const { error } = await supabase.from("tarot_history").insert(rows);
@@ -76,7 +75,6 @@ const Index = () => {
 
   const handleDonateClick = async () => {
     track("click_donate");
-    // Update click_donate for this reading
     await supabase
       .from("tarot_history")
       .update({ click_donate: true })
@@ -316,7 +314,6 @@ const Index = () => {
                 )}
               </AnimatePresence>
 
-              {/* Donate section - after reading */}
               {allFlipped && reading && !isStreaming && (
                 <DonateModal onClickDonate={handleDonateClick} />
               )}
