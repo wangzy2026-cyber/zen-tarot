@@ -1,0 +1,1 @@
+CREATE POLICY "Anyone can update click_donate" ON public.tarot_history FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
