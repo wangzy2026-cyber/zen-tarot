@@ -16,6 +16,7 @@ import { drawCards } from "@/data/tarotDeck";
 import { SpreadType, SPREADS, DrawnCard } from "@/types/tarot";
 import { supabase } from "@/integrations/supabase/client";
 import { getRandomCityAlias } from "@/utils/cityAlias";
+import { getOrCreateUserId } from "@/utils/userId";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -49,6 +50,7 @@ const Index = () => {
     const finalQuestion = questionText.trim() || "未填写问题";
     const rid = readingId.current;
 
+    const userId = getOrCreateUserId();
     const rows = cards.map((c) => ({
       card_name: c.nameCn || c.name,
       card_name_cn: c.nameCn || c.name,
@@ -60,6 +62,7 @@ const Index = () => {
       reading_id: rid,
       is_manual_mode: manualMode,
       click_donate: false,
+      user_id: userId,
     }));
 
     const { error } = await supabase.from("tarot_history").insert(rows);
@@ -83,6 +86,7 @@ const Index = () => {
   const streamReading = async () => {
     setIsStreaming(true);
     setReading("");
+    let accumulated = "";
     try {
       const spreadInfo = SPREADS[spread];
       const cardsText = cards
@@ -119,15 +123,25 @@ const Index = () => {
             try {
               const parsed = JSON.parse(data);
               const content = parsed.choices?.[0]?.delta?.content;
-              if (content) setReading((prev) => prev + content);
+              if (content) {
+                accumulated += content;
+                setReading((prev) => prev + content);
+              }
             } catch {}
           }
         }
       }
     } catch {
-      setReading("星象迷离，暂时无法解读。");
+      accumulated = "星象迷离，暂时无法解读。";
+      setReading(accumulated);
     } finally {
       setIsStreaming(false);
+      if (accumulated) {
+        await supabase
+          .from("tarot_history")
+          .update({ reading_text: accumulated } as any)
+          .eq("reading_id", readingId.current);
+      }
     }
   };
 
