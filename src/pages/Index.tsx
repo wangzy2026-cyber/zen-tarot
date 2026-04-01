@@ -86,6 +86,7 @@ const Index = () => {
   const streamReading = async () => {
     setIsStreaming(true);
     setReading("");
+    let accumulated = "";
     try {
       const spreadInfo = SPREADS[spread];
       const cardsText = cards
@@ -122,26 +123,25 @@ const Index = () => {
             try {
               const parsed = JSON.parse(data);
               const content = parsed.choices?.[0]?.delta?.content;
-              if (content) setReading((prev) => prev + content);
+              if (content) {
+                accumulated += content;
+                setReading((prev) => prev + content);
+              }
             } catch {}
           }
         }
       }
     } catch {
-      setReading("星象迷离，暂时无法解读。");
+      accumulated = "星象迷离，暂时无法解读。";
+      setReading(accumulated);
     } finally {
       setIsStreaming(false);
-      // Save reading text to DB
-      const finalReading = reading;
-      setTimeout(async () => {
-        const currentReading = document.querySelector<HTMLElement>('[data-reading-text]')?.textContent || "";
-        if (currentReading) {
-          await supabase
-            .from("tarot_history")
-            .update({ reading_text: currentReading } as any)
-            .eq("reading_id", readingId.current);
-        }
-      }, 500);
+      if (accumulated) {
+        await supabase
+          .from("tarot_history")
+          .update({ reading_text: accumulated } as any)
+          .eq("reading_id", readingId.current);
+      }
     }
   };
 
