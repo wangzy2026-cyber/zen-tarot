@@ -131,6 +131,17 @@ const Index = () => {
       setReading("星象迷离，暂时无法解读。");
     } finally {
       setIsStreaming(false);
+      // Save reading text to DB
+      const finalReading = reading;
+      setTimeout(async () => {
+        const currentReading = document.querySelector<HTMLElement>('[data-reading-text]')?.textContent || "";
+        if (currentReading) {
+          await supabase
+            .from("tarot_history")
+            .update({ reading_text: currentReading } as any)
+            .eq("reading_id", readingId.current);
+        }
+      }, 500);
     }
   };
 
