@@ -74,11 +74,11 @@ const DonateModal = ({ onClickDonate }: DonateModalProps) => {
                 <div className="absolute inset-[-16px] rounded-full border border-[hsl(45,60%,50%,0.08)]" />
 
                 {/* Circular QR code - cropped to just the QR */}
-                <div className="w-44 h-44 rounded-full overflow-hidden border-2 border-[hsl(45,60%,50%,0.3)] shadow-[0_0_30px_-5px_hsl(45,60%,50%,0.2)]">
+                <div className="w-48 h-48 rounded-full overflow-hidden border-2 border-[hsl(45,60%,50%,0.3)] shadow-[0_0_30px_-5px_hsl(45,60%,50%,0.2)] flex items-center justify-center bg-white">
                   <img
                     src={donateQr}
                     alt="赞赏码"
-                    className="w-[160%] h-[160%] object-cover -mt-[15%] -ml-[30%]"
+                    className="w-[130%] h-[130%] object-cover object-[center_35%]"
                   />
                 </div>
               </div>
