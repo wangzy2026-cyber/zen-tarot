@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://ybragvmvirddqfotqxig.supabase.co';
-
-// 将刚才 Copy 的内容贴在下面的单引号之间
-const supabaseAnonKey = 'sb_publishable_Kf3_0KgYnDX62_Tk6QbrBA_3zeEIjm9'; 
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlicmFndm12aXJkZHFmb3RxeGlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4MzgzNDcsImV4cCI6MjA5MDQxNDM0N30.4UKQfcVHjbHPEdOIiWjixswk7qVz5nNsNRL5VG9UQY0';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
