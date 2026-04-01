@@ -27,7 +27,9 @@ export type Database = {
           position_label: string | null
           question: string | null
           reading_id: string | null
+          reading_text: string | null
           spread_type: string
+          user_id: string | null
         }
         Insert: {
           card_name: string
@@ -41,7 +43,9 @@ export type Database = {
           position_label?: string | null
           question?: string | null
           reading_id?: string | null
+          reading_text?: string | null
           spread_type?: string
+          user_id?: string | null
         }
         Update: {
           card_name?: string
@@ -55,7 +59,9 @@ export type Database = {
           position_label?: string | null
           question?: string | null
           reading_id?: string | null
+          reading_text?: string | null
           spread_type?: string
+          user_id?: string | null
         }
         Relationships: []
       }
