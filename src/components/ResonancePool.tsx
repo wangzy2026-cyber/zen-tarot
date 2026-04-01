@@ -2,11 +2,9 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 
-interface ResonanceEntry {
-  id: string;
+interface CardResonance {
   card_name_cn: string;
-  city_alias: string;
-  created_at: string;
+  count: number;
 }
 
 interface ResonancePoolProps {
@@ -14,31 +12,34 @@ interface ResonancePoolProps {
 }
 
 const ResonancePool = ({ currentCards }: ResonancePoolProps) => {
-  const [resonanceCount, setResonanceCount] = useState(0);
-  const [recentDraws, setRecentDraws] = useState<ResonanceEntry[]>([]);
+  const [resonances, setResonances] = useState<CardResonance[]>([]);
+  const [todayTotal, setTodayTotal] = useState(0);
 
   const fetchResonance = async () => {
-    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-    const cardNames = currentCards.map((c) => c.name);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
-    // Count matching cards in last 5 min
-    const { count } = await supabase
-      .from("tarot_history")
-      .select("*", { count: "exact", head: true })
-      .in("card_name", cardNames)
-      .gte("created_at", fiveMinAgo);
+    // Get today's card counts for user's drawn cards
+    const cardNamesCn = currentCards.map((c) => c.nameCn);
 
-    setResonanceCount(count || 0);
-
-    // Recent draws
     const { data } = await supabase
       .from("tarot_history")
-      .select("id, card_name_cn, city_alias, created_at")
-      .gte("created_at", fiveMinAgo)
-      .order("created_at", { ascending: false })
-      .limit(12);
+      .select("card_name_cn")
+      .in("card_name_cn", cardNamesCn)
+      .gte("created_at", todayStart.toISOString());
 
-    setRecentDraws((data as ResonanceEntry[]) || []);
+    if (data) {
+      const countMap: Record<string, number> = {};
+      data.forEach((r) => {
+        countMap[r.card_name_cn] = (countMap[r.card_name_cn] || 0) + 1;
+      });
+      const results = Object.entries(countMap).map(([card_name_cn, count]) => ({
+        card_name_cn,
+        count,
+      }));
+      setResonances(results);
+      setTodayTotal(data.length);
+    }
   };
 
   useEffect(() => {
@@ -58,11 +59,7 @@ const ResonancePool = ({ currentCards }: ResonancePoolProps) => {
     };
   }, []);
 
-  const timeAgo = (ts: string) => {
-    const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
-    if (diff < 60) return `${diff}秒前`;
-    return `${Math.floor(diff / 60)}分钟前`;
-  };
+  if (resonances.length === 0) return null;
 
   return (
     <motion.div
@@ -71,52 +68,31 @@ const ResonancePool = ({ currentCards }: ResonancePoolProps) => {
       transition={{ delay: 1, duration: 0.8 }}
       className="w-full max-w-lg mt-10 border-t border-primary/10 pt-8"
     >
-      {/* Resonance count */}
-      {resonanceCount > 0 && (
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center text-muted-foreground text-xs mb-6 tracking-wider"
-        >
-          此时此刻，全球还有{" "}
-          <span className="text-primary font-semibold resonance-glow">
-            {resonanceCount}
-          </span>{" "}
-          位寻路者和你抽到了同样的牌
-        </motion.p>
-      )}
+      <p className="text-center text-muted-foreground/50 text-[10px] tracking-[0.3em] uppercase mb-4">
+        今日能量共鸣
+      </p>
 
-      {/* Resonance square */}
-      <div className="space-y-1">
-        <p className="text-center text-muted-foreground/50 text-[10px] tracking-[0.3em] uppercase mb-3">
-          共鸣广场 · 最近 5 分钟
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          {recentDraws.map((entry, i) => (
-            <motion.div
-              key={entry.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.05 }}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/40 border border-primary/5 resonance-item"
-            >
-              <div className="w-1.5 h-1.5 rounded-full bg-primary/30 resonance-dot" />
-              <div className="flex-1 min-w-0">
-                <p className="text-primary/80 text-xs truncate">
-                  {entry.card_name_cn}
-                </p>
-                <p className="text-muted-foreground/40 text-[9px]">
-                  {entry.city_alias || "匿名旅者"} · {timeAgo(entry.created_at)}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-        {recentDraws.length === 0 && (
-          <p className="text-center text-muted-foreground/30 text-xs py-4">
-            暂无共鸣数据，你是先行者 ✦
-          </p>
-        )}
+      <div className="space-y-2">
+        {resonances.map((r, i) => (
+          <motion.div
+            key={r.card_name_cn}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="flex items-center justify-center gap-2 text-center"
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-primary/30 resonance-dot" />
+            <p className="text-muted-foreground text-xs tracking-wider">
+              已有{" "}
+              <span className="text-primary font-semibold resonance-glow">
+                {r.count}
+              </span>{" "}
+              位探路者与你抽中了{" "}
+              <span className="text-primary/80">【{r.card_name_cn}】</span>
+              ，你们的能量正在此间交汇
+            </p>
+          </motion.div>
+        ))}
       </div>
     </motion.div>
   );

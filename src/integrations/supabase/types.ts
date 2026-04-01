@@ -19,30 +19,42 @@ export type Database = {
           card_name: string
           card_name_cn: string
           city_alias: string | null
+          click_donate: boolean | null
           created_at: string
           id: string
+          is_manual_mode: boolean | null
           is_reversed: boolean
           position_label: string | null
+          question: string | null
+          reading_id: string | null
           spread_type: string
         }
         Insert: {
           card_name: string
           card_name_cn: string
           city_alias?: string | null
+          click_donate?: boolean | null
           created_at?: string
           id?: string
+          is_manual_mode?: boolean | null
           is_reversed?: boolean
           position_label?: string | null
+          question?: string | null
+          reading_id?: string | null
           spread_type?: string
         }
         Update: {
           card_name?: string
           card_name_cn?: string
           city_alias?: string | null
+          click_donate?: boolean | null
           created_at?: string
           id?: string
+          is_manual_mode?: boolean | null
           is_reversed?: boolean
           position_label?: string | null
+          question?: string | null
+          reading_id?: string | null
           spread_type?: string
         }
         Relationships: []

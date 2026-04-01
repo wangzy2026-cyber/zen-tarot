@@ -10,6 +10,8 @@ import Starfield from "@/components/Starfield";
 import SpreadSelector from "@/components/SpreadSelector";
 import CardSpread from "@/components/CardSpread";
 import ResonancePool from "@/components/ResonancePool";
+import ManualDraw from "@/components/ManualDraw";
+import DonateModal from "@/components/DonateModal";
 import { drawCards } from "@/data/tarotDeck";
 import { SpreadType, SPREADS, DrawnCard } from "@/types/tarot";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +19,7 @@ import { getRandomCityAlias } from "@/utils/cityAlias";
 
 const Index = () => {
   const navigate = useNavigate();
-  const [phase, setPhase] = useState<"input" | "cards" | "shuffling">("input");
+  const [phase, setPhase] = useState<"input" | "manual" | "cards">("input");
   const [manualMode, setManualMode] = useState(false);
   const [question, setQuestion] = useState("");
   const [spread, setSpread] = useState<SpreadType>("trinity");
@@ -26,10 +28,10 @@ const Index = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const streamTriggered = useRef(false);
   const savedToDb = useRef(false);
+  const readingId = useRef(crypto.randomUUID());
 
   const allFlipped = cards.length > 0 && cards.every((c) => c.flipped);
 
-  // 1. 自动同步逻辑：当所有牌翻开时，统一保存到数据库
   useEffect(() => {
     if (allFlipped && !streamTriggered.current && !isStreaming) {
       streamTriggered.current = true;
@@ -37,37 +39,45 @@ const Index = () => {
     }
     if (allFlipped && !savedToDb.current) {
       savedToDb.current = true;
-      // 【修复】直接从 localStorage 读取，完全绕开闭包捕获旧 state 的问题
       const q = localStorage.getItem("tarot_question") || question || "未填写问题";
       saveToHistory(q);
     }
   }, [allFlipped]);
 
-  // 2. 核心保存函数：接收 questionText 参数，不再依赖闭包里的 state
   const saveToHistory = async (questionText: string) => {
     const alias = getRandomCityAlias();
     const finalQuestion = questionText.trim() || "未填写问题";
+    const rid = readingId.current;
 
     const rows = cards.map((c) => ({
       card_name: c.nameCn || c.name,
+      card_name_cn: c.nameCn || c.name,
       is_reversed: c.reversed,
       spread_type: spread,
       position_label: c.position,
       city_alias: alias,
       question: finalQuestion,
-      anonymous_id: "explorer_" + Math.random().toString(36).substr(2, 4),
+      reading_id: rid,
+      is_manual_mode: manualMode,
+      click_donate: false,
     }));
 
-    console.log("正在同步馆藏数据...", rows);
     const { error } = await supabase.from("tarot_history").insert(rows);
-
     if (error) {
       console.error("数据库同步失败:", error.message);
     } else {
-      console.log("同步成功！困惑已入库。");
       track("complete_tarot_draw");
       localStorage.removeItem("tarot_question");
     }
+  };
+
+  const handleDonateClick = async () => {
+    track("click_donate");
+    // Update click_donate for this reading
+    await supabase
+      .from("tarot_history")
+      .update({ click_donate: true })
+      .eq("reading_id", readingId.current);
   };
 
   const streamReading = async () => {
@@ -110,11 +120,11 @@ const Index = () => {
               const parsed = JSON.parse(data);
               const content = parsed.choices?.[0]?.delta?.content;
               if (content) setReading((prev) => prev + content);
-            } catch (e) {}
+            } catch {}
           }
         }
       }
-    } catch (e) {
+    } catch {
       setReading("星象迷离，暂时无法解读。");
     } finally {
       setIsStreaming(false);
@@ -123,29 +133,30 @@ const Index = () => {
 
   const handleBegin = () => {
     if (!question.trim()) return;
-
     track("start_tarot_draw");
-
-    // 【核心注入】：在切换到抽牌页之前，把问题锁进 localStorage
     localStorage.setItem("tarot_question", question);
-
-    const info = SPREADS[spread];
-    const drawn = drawCards(info.count).map((c, i) => ({
-      ...c,
-      id: i,
-      flipped: false,
-      loaded: false,
-      reversed: Math.random() < 0.5,
-      position: info.positions[i],
-    }));
-    setCards(drawn);
+    readingId.current = crypto.randomUUID();
 
     if (manualMode) {
-      setPhase("shuffling");
-      setTimeout(() => setPhase("cards"), 1800);
+      setPhase("manual");
     } else {
+      const info = SPREADS[spread];
+      const drawn = drawCards(info.count).map((c, i) => ({
+        ...c,
+        id: i,
+        flipped: false,
+        loaded: false,
+        reversed: Math.random() < 0.5,
+        position: info.positions[i],
+      }));
+      setCards(drawn);
       setPhase("cards");
     }
+  };
+
+  const handleManualComplete = (drawnCards: DrawnCard[]) => {
+    setCards(drawnCards);
+    setPhase("cards");
   };
 
   const handleFlip = (id: number) => {
@@ -168,6 +179,7 @@ const Index = () => {
     setIsStreaming(false);
     streamTriggered.current = false;
     savedToDb.current = false;
+    readingId.current = crypto.randomUUID();
     localStorage.removeItem("tarot_question");
   };
 
@@ -230,24 +242,23 @@ const Index = () => {
             </motion.div>
           )}
 
-          {phase === "shuffling" && (
+          {phase === "manual" && (
             <motion.div
-              key="shuffling"
+              key="manual"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.5 }}
-              className="flex flex-col items-center gap-6"
+              className="flex flex-col items-center w-full max-w-4xl"
             >
-              <motion.div
-                animate={{ rotate: [0, 10, -10, 5, -5, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              <ManualDraw spread={spread} onComplete={handleManualComplete} />
+              <motion.button
+                onClick={handleReset}
+                className="mt-8 flex items-center gap-2 text-muted-foreground text-xs tracking-widest hover:text-foreground transition-colors"
               >
-                <Sparkles className="w-10 h-10 text-primary/60" />
-              </motion.div>
-              <p className="text-primary/70 text-sm tracking-[0.3em] animate-pulse">
-                洗牌中...
-              </p>
+                <RotateCcw className="w-3 h-3" />
+                返回
+              </motion.button>
             </motion.div>
           )}
 
@@ -290,6 +301,12 @@ const Index = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Donate section - after reading */}
+              {allFlipped && reading && !isStreaming && (
+                <DonateModal onClickDonate={handleDonateClick} />
+              )}
+
               {allFlipped && (
                 <ResonancePool
                   currentCards={cards.map((c) => ({
