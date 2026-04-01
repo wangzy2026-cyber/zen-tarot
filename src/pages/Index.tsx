@@ -50,6 +50,7 @@ const Index = () => {
     const finalQuestion = questionText.trim() || "未填写问题";
     const rid = readingId.current;
 
+    const userId = getOrCreateUserId();
     const rows = cards.map((c) => ({
       card_name: c.nameCn || c.name,
       card_name_cn: c.nameCn || c.name,
@@ -61,6 +62,7 @@ const Index = () => {
       reading_id: rid,
       is_manual_mode: manualMode,
       click_donate: false,
+      user_id: userId,
     }));
 
     const { error } = await supabase.from("tarot_history").insert(rows);
