@@ -35,8 +35,8 @@ const Chronicles = () => {
     const userId = getOrCreateUserId();
     const { data, error } = await supabase
       .from("tarot_history")
-      .select("reading_id, question, spread_type, created_at, card_name_cn, is_reversed, position_label, reading_text")
-      .eq("user_id", userId)
+      .select("reading_id, question, spread_type, created_at, card_name, is_reversed, position_label, reading_text")
+      .eq("anonymous_id", userId)
       .order("created_at", { ascending: false })
       .limit(500);
 
@@ -60,7 +60,7 @@ const Chronicles = () => {
         };
       }
       grouped[rid].cards.push({
-        card_name_cn: row.card_name_cn,
+        card_name_cn: row.card_name,
         is_reversed: row.is_reversed,
         position_label: row.position_label || "",
       });
