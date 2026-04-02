@@ -99,9 +99,9 @@ const ManualDraw = ({ spread, onComplete }: ManualDrawProps) => {
         请凭直觉选择 {needed} 张牌（已选 {selected.length}/{needed}）
       </p>
 
-      {/* Scrollable card pool */}
-      <div className="w-full overflow-x-auto pb-4 -mx-4 px-4">
-        <div className="flex gap-2 md:flex-wrap md:justify-center min-w-max md:min-w-0">
+      {/* Card pool - grid on mobile, flex-wrap on desktop */}
+      <div className="w-full max-h-[60vh] overflow-y-auto overflow-x-hidden px-4 pb-4">
+        <div className="grid grid-cols-4 gap-2 justify-items-center md:flex md:flex-wrap md:justify-center md:gap-2">
           {pool.map((card, i) => {
             const isSelected = selected.includes(i);
             const selectionIndex = selected.indexOf(i);
@@ -109,14 +109,14 @@ const ManualDraw = ({ spread, onComplete }: ManualDrawProps) => {
             return (
               <motion.div
                 key={`${card.name}-${i}`}
-                className="cursor-pointer shrink-0"
+                className="cursor-pointer"
                 onClick={() => handlePick(i)}
                 whileHover={!isSelected ? { scale: 1.1, y: -8 } : {}}
                 animate={isSelected ? { scale: 0.95, opacity: 0.6 } : {}}
               >
                 <div className="relative perspective-1000">
                   <motion.div
-                    className="w-16 h-24 md:w-20 md:h-30 rounded-lg border border-primary/20 bg-secondary/80 backdrop-blur-sm flex items-center justify-center preserve-3d"
+                    className="w-[18vw] aspect-[5/8] md:w-20 md:h-30 rounded-lg border border-primary/20 bg-secondary/80 backdrop-blur-sm flex items-center justify-center preserve-3d"
                     animate={{
                       rotateY: isSelected ? 180 : 0,
                       boxShadow: isSelected
