@@ -29,9 +29,9 @@ const CardFront = ({ card, onLoad }: { card: DrawnCard; onLoad: () => void }) =>
 
 const TarotCard = ({ card, index, onFlip, onImageLoad, compact, mobile }: any) => {
   const sizeClass = compact
-    ? "w-20 h-32 md:w-24 md:h-38"
+    ? "w-20 h-[7.5rem] md:w-24 md:h-38"
     : mobile
-      ? "w-24 h-40 md:w-36 md:h-56"
+      ? "w-[28vw] max-w-28 aspect-[5/8] md:w-36 md:h-56"
       : "w-28 h-44 md:w-36 md:h-56";
 
   return (
