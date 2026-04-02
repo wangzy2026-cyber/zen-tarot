@@ -36,7 +36,7 @@ const TrinityLayout = ({ cards, onFlip, onImageLoad }: Omit<CardSpreadProps, "sp
 const CelticLayout = ({ cards, onFlip, onImageLoad }: Omit<CardSpreadProps, "spread">) => (
   <div className="w-full max-w-2xl mx-auto">
     {/* Mobile: 2-col grid, no horizontal scroll */}
-    <div className="grid grid-cols-2 gap-2 place-items-center md:hidden">
+    <div className="grid grid-cols-2 gap-4 place-items-center px-4 md:hidden">
       {cards.map((card, i) => (
         <div key={card.id} className="flex flex-col items-center gap-1">
           <TarotCard card={card} index={i} onFlip={onFlip} onImageLoad={onImageLoad} compact />
