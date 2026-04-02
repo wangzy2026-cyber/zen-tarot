@@ -38,14 +38,14 @@ const TrinityLayout = ({ cards, onFlip, onImageLoad }: Omit<CardSpreadProps, "sp
 
 const CelticLayout = ({ cards, onFlip, onImageLoad }: Omit<CardSpreadProps, "spread">) => (
   <div className="w-full max-w-2xl mx-auto">
-    {/* Mobile: vertical list */}
-    <div className="flex flex-col gap-3 md:hidden">
+    {/* Mobile: 2-col grid, no horizontal scroll */}
+    <div className="grid grid-cols-2 gap-2 place-items-center md:hidden">
       {cards.map((card, i) => (
-        <div key={card.id} className="flex items-center gap-3">
-          <span className="text-muted-foreground/50 text-[10px] w-16 text-right shrink-0">
+        <div key={card.id} className="flex flex-col items-center gap-1">
+          <TarotCard card={card} index={i} onFlip={onFlip} onImageLoad={onImageLoad} compact />
+          <span className="text-muted-foreground/50 text-[9px] text-center leading-tight max-w-[80px]">
             {card.position}
           </span>
-          <TarotCard card={card} index={i} onFlip={onFlip} onImageLoad={onImageLoad} compact />
         </div>
       ))}
     </div>
