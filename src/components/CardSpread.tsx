@@ -18,14 +18,11 @@ const SingleLayout = ({ cards, onFlip, onImageLoad }: Omit<CardSpreadProps, "spr
 
 const TrinityLayout = ({ cards, onFlip, onImageLoad }: Omit<CardSpreadProps, "spread">) => (
   <>
-    {/* Mobile: top-1 bottom-2 pyramid */}
-    <div className="flex flex-col items-center gap-3 md:hidden">
-      <TarotCard key={cards[0]?.id} card={cards[0]} index={0} onFlip={onFlip} onImageLoad={onImageLoad} mobile />
-      <div className="flex gap-3 justify-center">
-        {cards.slice(1).map((card, i) => (
-          <TarotCard key={card.id} card={card} index={i + 1} onFlip={onFlip} onImageLoad={onImageLoad} mobile />
-        ))}
-      </div>
+    {/* Mobile: 3-col grid matrix */}
+    <div className="grid grid-cols-3 gap-4 place-items-center px-4 md:hidden">
+      {cards.map((card, i) => (
+        <TarotCard key={card.id} card={card} index={i} onFlip={onFlip} onImageLoad={onImageLoad} mobile />
+      ))}
     </div>
     {/* Desktop */}
     <div className="hidden md:flex gap-8 justify-center">
