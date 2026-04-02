@@ -11,17 +11,29 @@ interface CardSpreadProps {
 const SingleLayout = ({ cards, onFlip, onImageLoad }: Omit<CardSpreadProps, "spread">) => (
   <div className="flex justify-center">
     {cards.map((card, i) => (
-      <TarotCard key={card.id} card={card} index={i} onFlip={onFlip} onImageLoad={onImageLoad} />
+      <TarotCard key={card.id} card={card} index={i} onFlip={onFlip} onImageLoad={onImageLoad} mobile />
     ))}
   </div>
 );
 
 const TrinityLayout = ({ cards, onFlip, onImageLoad }: Omit<CardSpreadProps, "spread">) => (
-  <div className="flex gap-5 md:gap-8 justify-center">
-    {cards.map((card, i) => (
-      <TarotCard key={card.id} card={card} index={i} onFlip={onFlip} onImageLoad={onImageLoad} />
-    ))}
-  </div>
+  <>
+    {/* Mobile: top-1 bottom-2 pyramid */}
+    <div className="flex flex-col items-center gap-3 md:hidden">
+      <TarotCard key={cards[0]?.id} card={cards[0]} index={0} onFlip={onFlip} onImageLoad={onImageLoad} mobile />
+      <div className="flex gap-3 justify-center">
+        {cards.slice(1).map((card, i) => (
+          <TarotCard key={card.id} card={card} index={i + 1} onFlip={onFlip} onImageLoad={onImageLoad} mobile />
+        ))}
+      </div>
+    </div>
+    {/* Desktop */}
+    <div className="hidden md:flex gap-8 justify-center">
+      {cards.map((card, i) => (
+        <TarotCard key={card.id} card={card} index={i} onFlip={onFlip} onImageLoad={onImageLoad} />
+      ))}
+    </div>
+  </>
 );
 
 const CelticLayout = ({ cards, onFlip, onImageLoad }: Omit<CardSpreadProps, "spread">) => (
