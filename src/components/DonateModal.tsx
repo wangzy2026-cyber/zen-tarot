@@ -21,7 +21,7 @@ const DonateModal = ({ onClickDonate }: DonateModalProps) => {
 
   const tabConfig = {
     wechat: { img: donateQr, label: "微信扫码 · 随喜赞赏", sub: "每一份能量都将化为星光", imgClass: "w-[130%] h-[130%] object-cover object-[center_35%]" },
-    paypal: { img: paypalQr, label: "扫码支付 · PayPal", sub: "支持国际信用卡付款", imgClass: "w-[90%] h-[90%] object-contain" },
+    paypal: { img: paypalQr, label: "PayPal · 顺意心意", sub: "感谢您的鼓励，让创作持续", imgClass: "w-[90%] h-[90%] object-contain" },
   };
 
   const current = tabConfig[tab];
