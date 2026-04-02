@@ -27,8 +27,12 @@ const CardFront = ({ card, onLoad }: { card: DrawnCard; onLoad: () => void }) =>
   </div>
 );
 
-const TarotCard = ({ card, index, onFlip, onImageLoad, compact }: any) => {
-  const sizeClass = compact ? "w-20 h-32 md:w-24 md:h-38" : "w-28 h-44 md:w-36 md:h-56";
+const TarotCard = ({ card, index, onFlip, onImageLoad, compact, mobile }: any) => {
+  const sizeClass = compact
+    ? "w-20 h-32 md:w-24 md:h-38"
+    : mobile
+      ? "w-24 h-40 md:w-36 md:h-56"
+      : "w-28 h-44 md:w-36 md:h-56";
 
   return (
     <motion.div
