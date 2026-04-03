@@ -2,29 +2,18 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, X } from "lucide-react";
 import donateQr from "@/assets/donate-qr.jpg";
-import paypalQr from "@/assets/paypal-qr.png";
 
 interface DonateModalProps {
   onClickDonate?: () => void;
 }
 
-type PayTab = "wechat" | "paypal";
-
 const DonateModal = ({ onClickDonate }: DonateModalProps) => {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<PayTab>("wechat");
 
   const handleOpen = () => {
     setOpen(true);
     onClickDonate?.();
   };
-
-  const tabConfig = {
-    wechat: { img: donateQr, label: "微信扫码 · 随喜赞赏", sub: "每一份能量都将化为星光", imgClass: "w-[130%] h-[130%] object-cover object-[center_35%]" },
-    paypal: { img: paypalQr, label: "PayPal · 顺意心意", sub: "感谢您的鼓励，让创作持续", imgClass: "w-[90%] h-[90%] object-contain" },
-  };
-
-  const current = tabConfig[tab];
 
   return (
     <>
@@ -73,51 +62,25 @@ const DonateModal = ({ onClickDonate }: DonateModalProps) => {
                 <X className="w-4 h-4" />
               </button>
 
-              {/* Tabs */}
-              <div className="flex mb-5 rounded-full border border-[hsl(45,60%,50%,0.2)] overflow-hidden">
-                {(["wechat", "paypal"] as PayTab[]).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTab(t)}
-                    className={`px-4 py-1.5 text-[11px] tracking-widest transition-all duration-300 ${
-                      tab === t
-                        ? "bg-[hsl(45,60%,50%,0.15)] text-[hsl(45,60%,50%,0.9)]"
-                        : "text-muted-foreground/40 hover:text-muted-foreground/60"
-                    }`}
-                  >
-                    {t === "wechat" ? "微信赞赏" : "PayPal"}
-                  </button>
-                ))}
-              </div>
-
-              {/* QR area with crossfade */}
+              {/* QR area */}
               <div className="relative mb-5">
                 <div className="absolute inset-[-8px] rounded-full border border-[hsl(45,60%,50%,0.2)] animate-pulse" />
                 <div className="absolute inset-[-16px] rounded-full border border-[hsl(45,60%,50%,0.08)]" />
 
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={tab}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.25 }}
-                    className="w-48 h-48 rounded-full overflow-hidden border-2 border-[hsl(45,60%,50%,0.3)] shadow-[0_0_30px_-5px_hsl(45,60%,50%,0.2)] flex items-center justify-center bg-white"
-                  >
-                    <img
-                      src={current.img}
-                      alt="赞赏码"
-                      className={current.imgClass}
-                    />
-                  </motion.div>
-                </AnimatePresence>
+                <div className="w-48 h-48 rounded-full overflow-hidden border-2 border-[hsl(45,60%,50%,0.3)] shadow-[0_0_30px_-5px_hsl(45,60%,50%,0.2)] flex items-center justify-center bg-white">
+                  <img
+                    src={donateQr}
+                    alt="赞赏码"
+                    className="w-[130%] h-[130%] object-cover object-[center_35%]"
+                  />
+                </div>
               </div>
 
               <p className="text-primary/70 text-xs tracking-[0.2em] mb-1">
-                {current.label}
+                微信扫码 · 随喜赞赏
               </p>
               <p className="text-muted-foreground/40 text-[10px] mb-5">
-                {current.sub}
+                每一份能量都将化为星光
               </p>
 
               <div className="flex gap-3">
