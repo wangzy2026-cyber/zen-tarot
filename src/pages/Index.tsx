@@ -243,11 +243,26 @@ const Index = () => {
               <input
                 type="text"
                 value={question}
-                onChange={(e) => setQuestion(e.target.value)}
+                onChange={(e) => {
+                  setQuestion(e.target.value);
+                  if (validationError) setValidationError("");
+                }}
                 onKeyDown={(e) => e.key === "Enter" && handleBegin()}
                 placeholder="静心，输入你的困惑..."
                 className="w-full bg-transparent border-b border-primary/15 text-primary placeholder:text-muted-foreground text-center text-lg py-3 focus:outline-none focus:border-primary/40 transition-colors"
               />
+              <AnimatePresence>
+                {validationError && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className="text-amber-400/80 text-xs mt-2 tracking-wider text-center"
+                  >
+                    {validationError}
+                  </motion.p>
+                )}
+              </AnimatePresence>
               <div className="flex items-center gap-6 mt-10">
                 <button
                   onClick={handleBegin}
