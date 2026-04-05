@@ -24,6 +24,7 @@ const Index = () => {
   const [phase, setPhase] = useState<"input" | "manual" | "cards">("input");
   const [manualMode, setManualMode] = useState(false);
   const [question, setQuestion] = useState("");
+  const [validationError, setValidationError] = useState("");
   const [spread, setSpread] = useState<SpreadType>("trinity");
   const [cards, setCards] = useState<DrawnCard[]>([]);
   const [reading, setReading] = useState("");
