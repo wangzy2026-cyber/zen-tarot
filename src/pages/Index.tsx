@@ -12,6 +12,7 @@ import CardSpread from "@/components/CardSpread";
 import ResonancePool from "@/components/ResonancePool";
 import ManualDraw from "@/components/ManualDraw";
 import DonateModal from "@/components/DonateModal";
+import MigrationModal from "@/components/MigrationModal";
 import { drawCards } from "@/data/tarotDeck";
 import { SpreadType, SPREADS, DrawnCard } from "@/types/tarot";
 import { supabase } from "@/integrations/supabase/client";
@@ -197,6 +198,7 @@ const Index = () => {
 
   return (
     <>
+      <MigrationModal />
       <Starfield />
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-12 overflow-hidden">
         <AnimatePresence mode="wait">
