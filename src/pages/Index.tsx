@@ -24,6 +24,7 @@ const Index = () => {
   const [phase, setPhase] = useState<"input" | "manual" | "cards">("input");
   const [manualMode, setManualMode] = useState(false);
   const [question, setQuestion] = useState("");
+  const [validationError, setValidationError] = useState("");
   const [spread, setSpread] = useState<SpreadType>("trinity");
   const [cards, setCards] = useState<DrawnCard[]>([]);
   const [reading, setReading] = useState("");
@@ -144,8 +145,18 @@ const Index = () => {
     }
   };
 
+  const validateQuestion = (text: string): boolean => {
+    const stripped = text.replace(/[\s\p{P}\p{S}]/gu, "");
+    if (stripped.length < 3) {
+      setValidationError("请输入您真正想问的问题，塔罗牌需要感受到您的心意才能为您指引 🃏");
+      return false;
+    }
+    setValidationError("");
+    return true;
+  };
+
   const handleBegin = () => {
-    if (!question.trim()) return;
+    if (!validateQuestion(question)) return;
     track("start_tarot_draw");
     localStorage.setItem("tarot_question", question);
     readingId.current = crypto.randomUUID();
@@ -232,11 +243,26 @@ const Index = () => {
               <input
                 type="text"
                 value={question}
-                onChange={(e) => setQuestion(e.target.value)}
+                onChange={(e) => {
+                  setQuestion(e.target.value);
+                  if (validationError) setValidationError("");
+                }}
                 onKeyDown={(e) => e.key === "Enter" && handleBegin()}
                 placeholder="静心，输入你的困惑..."
                 className="w-full bg-transparent border-b border-primary/15 text-primary placeholder:text-muted-foreground text-center text-lg py-3 focus:outline-none focus:border-primary/40 transition-colors"
               />
+              <AnimatePresence>
+                {validationError && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className="text-amber-400/80 text-xs mt-2 tracking-wider text-center"
+                  >
+                    {validationError}
+                  </motion.p>
+                )}
+              </AnimatePresence>
               <div className="flex items-center gap-6 mt-10">
                 <button
                   onClick={handleBegin}
