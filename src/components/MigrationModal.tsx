@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ExternalLink, X } from "lucide-react";
 
 const MigrationModal = () => {
-  const [open, setOpen] = useState(true);
+  const shouldShow = window.location.hostname === "zen-tarot-roan.vercel.app";
+  const [open, setOpen] = useState(shouldShow);
 
   return (
     <AnimatePresence>
