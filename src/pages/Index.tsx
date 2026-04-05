@@ -145,8 +145,18 @@ const Index = () => {
     }
   };
 
+  const validateQuestion = (text: string): boolean => {
+    const stripped = text.replace(/[\s\p{P}\p{S}]/gu, "");
+    if (stripped.length < 3) {
+      setValidationError("请输入您真正想问的问题，塔罗牌需要感受到您的心意才能为您指引 🃏");
+      return false;
+    }
+    setValidationError("");
+    return true;
+  };
+
   const handleBegin = () => {
-    if (!question.trim()) return;
+    if (!validateQuestion(question)) return;
     track("start_tarot_draw");
     localStorage.setItem("tarot_question", question);
     readingId.current = crypto.randomUUID();
