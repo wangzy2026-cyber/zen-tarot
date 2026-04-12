@@ -1,14 +1,23 @@
 // Crisis keyword detection and language (Simplified vs Traditional Chinese) detection
 
 const CRISIS_KEYWORDS = [
-  // Chinese
+  // Chinese - direct
   "不想活", "想死", "自杀", "自殺", "去死", "活不下去", "不想活了",
   "想自杀", "想自殺", "结束生命", "結束生命", "了结", "了結",
   "轻生", "輕生", "寻死", "尋死", "厌世", "厭世", "不如死",
   "死了算了", "活着没意思", "活著沒意思", "生无可恋", "生無可戀",
   "跳楼", "跳樓", "割腕", "服毒", "上吊", "吞药", "吞藥",
+  // Chinese - semantic / despair
+  "想解脱", "想解脫", "离开这个世界", "離開這個世界",
+  "人间不值得", "人間不值得", "活着还是死去", "活著還是死去",
+  "人生的意义是消失", "人生的意義是消失",
+  "不想醒来", "不想醒來", "永远睡去", "永遠睡去",
+  "世界没有我会更好", "世界沒有我會更好",
+  "没有人在乎", "沒有人在乎", "活着好累", "活著好累",
+  "消失就好了", "如果我不在了", "如果我不在了",
   // English
   "suicide", "kill myself", "end my life", "want to die", "don't want to live",
+  "better off dead", "no reason to live",
 ];
 
 /**
@@ -19,17 +28,11 @@ export function containsCrisisKeyword(text: string): boolean {
   return CRISIS_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
-// CJK Unified Ideographs ranges that are predominantly Traditional Chinese
-// We use a heuristic: check for characters that differ between Simplified and Traditional
-const TRADITIONAL_ONLY_CHARS =
-  /[東車國學點團書導歲雲電開問關說請還進運過應區經續選總資會義體環實際語認議際過歲門開問關經聲報請說認進選還過資動聽點長體國實際際際環際際]/;
-
 /**
  * Detect if text is likely Traditional Chinese.
  * Returns "traditional" or "simplified".
  */
 export function detectChineseVariant(text: string): "traditional" | "simplified" {
-  // Check for common Traditional-only characters
   const traditionalChars = [
     "嗎", "們", "裡", "與", "對", "將", "從", "這", "過", "還",
     "進", "為", "無", "後", "應", "點", "開", "間", "說", "請",

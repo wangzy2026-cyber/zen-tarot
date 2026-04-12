@@ -128,6 +128,12 @@ const Index = () => {
               const content = parsed.choices?.[0]?.delta?.content;
               if (content) {
                 accumulated += content;
+                // Second-layer defense: detect CRISIS_DETECTED from LLM
+                if (accumulated.trim().startsWith("CRISIS_DETECTED")) {
+                  setShowCrisis(true);
+                  setIsStreaming(false);
+                  return;
+                }
                 setReading((prev) => prev + content);
               }
             } catch {}
