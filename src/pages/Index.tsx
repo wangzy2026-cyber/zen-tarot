@@ -12,6 +12,8 @@ import CardSpread from "@/components/CardSpread";
 import ResonancePool from "@/components/ResonancePool";
 import ManualDraw from "@/components/ManualDraw";
 import DonateModal from "@/components/DonateModal";
+import CrisisInterventionView from "@/components/CrisisInterventionView";
+import { containsCrisisKeyword } from "@/utils/crisisDetection";
 import MigrationModal from "@/components/MigrationModal";
 import { drawCards } from "@/data/tarotDeck";
 import { SpreadType, SPREADS, DrawnCard } from "@/types/tarot";
@@ -29,6 +31,7 @@ const Index = () => {
   const [cards, setCards] = useState<DrawnCard[]>([]);
   const [reading, setReading] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [showCrisis, setShowCrisis] = useState(false);
   const streamTriggered = useRef(false);
   const savedToDb = useRef(false);
   const readingId = useRef(crypto.randomUUID());
@@ -156,6 +159,10 @@ const Index = () => {
   };
 
   const handleBegin = () => {
+    if (containsCrisisKeyword(question)) {
+      setShowCrisis(true);
+      return;
+    }
     if (!validateQuestion(question)) return;
     track("start_tarot_draw");
     localStorage.setItem("tarot_question", question);
@@ -206,6 +213,15 @@ const Index = () => {
     readingId.current = crypto.randomUUID();
     localStorage.removeItem("tarot_question");
   };
+
+  const handleCrisisClose = () => {
+    setShowCrisis(false);
+    handleReset();
+  };
+
+  if (showCrisis) {
+    return <CrisisInterventionView inputText={question} onClose={handleCrisisClose} />;
+  }
 
   return (
     <>
