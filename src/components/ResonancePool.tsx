@@ -21,23 +21,28 @@ const ResonancePool = ({ currentCards }: ResonancePoolProps) => {
 
       const cardNames = currentCards.map((c) => c.nameCn);
 
-      const { data } = await supabase
-        .from("tarot_history")
-        .select("card_name")
-        .in("card_name", cardNames)
-        .gte("created_at", todayStart.toISOString());
-
-      if (data) {
-        const countMap: Record<string, number> = {};
-        data.forEach((r) => {
-          countMap[r.card_name] = (countMap[r.card_name] || 0) + 1;
-        });
-        const results = Object.entries(countMap).map(([card_name, count]) => ({
-          card_name,
-          count,
-        }));
-        setResonances(results);
+      let data: any[] = [];
+      try {
+        data = await getReadings("", 500);
+      } catch {
+        return;
       }
+
+      const filtered = data.filter(
+        (r) =>
+          cardNames.includes(r.card_name) &&
+          new Date(r.created_at).getTime() >= todayStart.getTime()
+      );
+
+      const countMap: Record<string, number> = {};
+      filtered.forEach((r) => {
+        countMap[r.card_name] = (countMap[r.card_name] || 0) + 1;
+      });
+      const results = Object.entries(countMap).map(([card_name, count]) => ({
+        card_name,
+        count,
+      }));
+      setResonances(results);
     };
 
     fetchResonance();
