@@ -99,15 +99,7 @@ const Index = () => {
         )
         .join("；");
 
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tarot-reading`;
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ question, cards, spread, cardsText }),
-      });
+      const resp = await getTarotReading({ question, cardsText, spread });
 
       if (!resp.ok) throw new Error("AI 解析失败");
       const reader = resp.body?.getReader();
