@@ -135,12 +135,6 @@ const Index = () => {
       setReading(accumulated);
     } finally {
       setIsStreaming(false);
-      if (accumulated) {
-        await supabase
-          .from("tarot_history")
-          .update({ reading_text: accumulated } as any)
-          .eq("reading_id", readingId.current);
-      }
     }
   };
 
