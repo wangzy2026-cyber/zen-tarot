@@ -33,14 +33,14 @@ const Chronicles = () => {
 
   const fetchHistory = async () => {
     const userId = getOrCreateUserId();
-    const { data, error } = await supabase
-      .from("tarot_history")
-      .select("reading_id, question, spread_type, created_at, card_name, is_reversed, position_label, reading_text")
-      .eq("anonymous_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(500);
-
-    if (error || !data) {
+    let data: any[] | null = null;
+    try {
+      data = await getReadings(userId, 500);
+    } catch {
+      setLoading(false);
+      return;
+    }
+    if (!data) {
       setLoading(false);
       return;
     }
@@ -61,7 +61,7 @@ const Chronicles = () => {
       }
       grouped[rid].cards.push({
         card_name_cn: row.card_name,
-        is_reversed: row.is_reversed,
+        is_reversed: !!row.is_reversed,
         position_label: row.position_label || "",
       });
     }
