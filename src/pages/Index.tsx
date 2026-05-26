@@ -17,7 +17,7 @@ import { containsCrisisKeyword } from "@/utils/crisisDetection";
 import MigrationModal from "@/components/MigrationModal";
 import { drawCards } from "@/data/tarotDeck";
 import { SpreadType, SPREADS, DrawnCard } from "@/types/tarot";
-import { supabase } from "@/integrations/supabase/client";
+import { saveReadings, getTarotReading } from "@/lib/api";
 import { getRandomCityAlias } from "@/utils/cityAlias";
 import { getOrCreateUserId } from "@/utils/userId";
 
@@ -57,6 +57,8 @@ const Index = () => {
 
     const userId = getOrCreateUserId();
     const rows = cards.map((c) => ({
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
       card_name: c.nameCn || c.name,
       is_reversed: c.reversed,
       spread_type: spread,
@@ -69,21 +71,17 @@ const Index = () => {
       anonymous_id: userId,
     }));
 
-    const { error } = await supabase.from("tarot_history").insert(rows);
-    if (error) {
-      console.error("数据库同步失败:", error.message);
-    } else {
+    try {
+      await saveReadings(rows);
       track("complete_tarot_draw");
       localStorage.removeItem("tarot_question");
+    } catch (e: any) {
+      console.error("数据库同步失败:", e?.message);
     }
   };
 
   const handleDonateClick = async () => {
     track("click_donate");
-    await supabase
-      .from("tarot_history")
-      .update({ click_donate: true })
-      .eq("reading_id", readingId.current);
   };
 
   const streamReading = async () => {
@@ -101,15 +99,7 @@ const Index = () => {
         )
         .join("；");
 
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tarot-reading`;
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ question, cards, spread, cardsText }),
-      });
+      const resp = await getTarotReading({ question, cardsText, spread });
 
       if (!resp.ok) throw new Error("AI 解析失败");
       const reader = resp.body?.getReader();
@@ -145,12 +135,6 @@ const Index = () => {
       setReading(accumulated);
     } finally {
       setIsStreaming(false);
-      if (accumulated) {
-        await supabase
-          .from("tarot_history")
-          .update({ reading_text: accumulated } as any)
-          .eq("reading_id", readingId.current);
-      }
     }
   };
 
