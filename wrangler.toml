@@ -1,0 +1,8 @@
+name = "zen-tarot"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "zen-tarot-db"
+database_id = "52f03acd-631f-4283-a2a5-caebc49c3a69"
