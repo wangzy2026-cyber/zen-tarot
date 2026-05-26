@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Eye } from "lucide-react";
 import Starfield from "@/components/Starfield";
-import { supabase } from "@/integrations/supabase/client";
+import { getReadings } from "@/lib/api";
 import { getOrCreateUserId } from "@/utils/userId";
 
 interface ReadingSummary {
