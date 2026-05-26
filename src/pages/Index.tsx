@@ -57,6 +57,8 @@ const Index = () => {
 
     const userId = getOrCreateUserId();
     const rows = cards.map((c) => ({
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
       card_name: c.nameCn || c.name,
       is_reversed: c.reversed,
       spread_type: spread,
@@ -69,21 +71,17 @@ const Index = () => {
       anonymous_id: userId,
     }));
 
-    const { error } = await supabase.from("tarot_history").insert(rows);
-    if (error) {
-      console.error("数据库同步失败:", error.message);
-    } else {
+    try {
+      await saveReadings(rows);
       track("complete_tarot_draw");
       localStorage.removeItem("tarot_question");
+    } catch (e: any) {
+      console.error("数据库同步失败:", e?.message);
     }
   };
 
   const handleDonateClick = async () => {
     track("click_donate");
-    await supabase
-      .from("tarot_history")
-      .update({ click_donate: true })
-      .eq("reading_id", readingId.current);
   };
 
   const streamReading = async () => {
