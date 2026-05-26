@@ -17,7 +17,7 @@ import { containsCrisisKeyword } from "@/utils/crisisDetection";
 import MigrationModal from "@/components/MigrationModal";
 import { drawCards } from "@/data/tarotDeck";
 import { SpreadType, SPREADS, DrawnCard } from "@/types/tarot";
-import { supabase } from "@/integrations/supabase/client";
+import { saveReadings, getTarotReading } from "@/lib/api";
 import { getRandomCityAlias } from "@/utils/cityAlias";
 import { getOrCreateUserId } from "@/utils/userId";
 
