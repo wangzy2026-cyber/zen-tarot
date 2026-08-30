@@ -9,7 +9,23 @@ export async function onRequestOptions() {
 
 export async function onRequestPost(context: any) {
   try {
-    const { question, cardsText, spread } = await context.request.json();
+    const body = await context.request.json().catch(() => null);
+    if (!body) {
+      return new Response(
+        JSON.stringify({ error: "请求体不是合法 JSON" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    // 8.22 修复：输入截断，禁止超长文本刷 token（单次请求成本上限化）
+    const question = String(body.question || "").slice(0, 400);
+    const cardsText = String(body.cardsText || "").slice(0, 800);
+    const spread = body.spread;
+    if (!question.trim()) {
+      return new Response(
+        JSON.stringify({ error: "问题不能为空" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const DEEPSEEK_API_KEY = (context.env.DEEPSEEK_API_KEY || "").replace(/[^\x20-\x7E]/g, "").trim();
     if (!DEEPSEEK_API_KEY) {

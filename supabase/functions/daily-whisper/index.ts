@@ -11,6 +11,17 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // 8.22 修复：白名单密钥校验（APP_SECRET 放在 Supabase Secrets）。
+  // fail-closed：未配置 APP_SECRET = 全部拒绝，绝不允许再出现开放代理。
+  const APP_SECRET = (Deno.env.get("APP_SECRET") || "").trim();
+  const supplied = req.headers.get("x-app-secret") || "";
+  if (!APP_SECRET || supplied !== APP_SECRET) {
+    return new Response(
+      JSON.stringify({ error: "unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     const { summaryText } = await req.json();
 

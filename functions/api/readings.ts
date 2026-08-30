@@ -12,20 +12,20 @@ export async function onRequestGet(context: any) {
   try {
     const url = new URL(context.request.url);
     const anonymousId = url.searchParams.get("anonymous_id");
-    const limit = parseInt(url.searchParams.get("limit") || "50");
+    // 8.22 修复：没有 anonymous_id 时不允许读全表（原逻辑会把所有用户的抽牌记录全量返回）
+    if (!anonymousId) {
+      return new Response(
+        JSON.stringify({ error: "缺少 anonymous_id 参数" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "50"), 1), 100);
 
     const db = context.env.DB;
 
-    let result;
-    if (anonymousId) {
-      result = await db.prepare(
-        `SELECT * FROM tarot_readings WHERE anonymous_id = ? ORDER BY created_at DESC LIMIT ?`
-      ).bind(anonymousId, limit).all();
-    } else {
-      result = await db.prepare(
-        `SELECT * FROM tarot_readings ORDER BY created_at DESC LIMIT ?`
-      ).bind(limit).all();
-    }
+    const result = await db.prepare(
+      `SELECT * FROM tarot_readings WHERE anonymous_id = ? ORDER BY created_at DESC LIMIT ?`
+    ).bind(anonymousId, limit).all();
 
     return new Response(JSON.stringify(result.results), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
