@@ -21,6 +21,13 @@ const LIMITS = [
   { windowSec: 86400, max: 150 }, // 每天 150 次
 ];
 
+// 8.31 加固：识别脚本 UA（不带浏览器标志的常见爬虫/轮询工具）
+const BAD_UA =
+  /python-requests|curl\/|wget\/|Go-http-client|scrapy|zgrab|PostmanRuntime|SemrushBot|AhrefsBot|(^|\/| )node\b|java\/|okhttp-?\/\d|axios\/\d|libwww-perl|python-[0-9a-z]/i;
+
+// 每匿名用户每天最多解读 25 次（配合 x-anonymous-id 头；换 IP 也绕不过）
+const MAX_PER_UID_PER_DAY = 25;
+
 async function bump(db: any, ip: string, windowSec: number, max: number) {
   const bucket = Math.floor(Date.now() / (windowSec * 1000));
   const key = `rl:${ip}:${windowSec}:${bucket}`;
@@ -89,6 +96,48 @@ export async function onRequest(context: Ctx): Promise<Response> {
             },
           }
         );
+      }
+    }
+
+    // 8.31 加固①：爬虫 UA 拦截（只挡最烧钱的 tarot-reading）
+    const url = new URL(context.request.url);
+    const isTarotReading = context.request.method === "POST" && url.pathname.endsWith("/tarot-reading");
+    const ua = context.request.headers.get("user-agent") || "";
+    if (isTarotReading && BAD_UA.test(ua)) {
+      return new Response(
+        JSON.stringify({ error: "请使用浏览器访问" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 8.31 加固②：每匿名用户每日配额（前端带 x-anonymous-id；换 IP 也绕不过）
+    if (isTarotReading) {
+      const anonId = context.request.headers.get("x-anonymous-id")?.trim() || "";
+      if (anonId && anonId.length <= 64) {
+        const dayBucket = Math.floor(Date.now() / 86400000);
+        const key = `rl:uid:${anonId}:${dayBucket}`;
+        const row = await db.prepare("SELECT count FROM rate_limit WHERE key = ?").bind(key).first();
+        const count = row ? row.count + 1 : 1;
+        if (row) {
+          await db
+            .prepare("UPDATE rate_limit SET count = ?, updated_at = ? WHERE key = ?")
+            .bind(count, Date.now(), key)
+            .run();
+        } else {
+          await db
+            .prepare("INSERT INTO rate_limit (key, count, updated_at) VALUES (?, ?, ?)")
+            .bind(key, count, Date.now())
+            .run();
+        }
+        if (count > MAX_PER_UID_PER_DAY) {
+          return new Response(
+            JSON.stringify({ error: "今日解读次数已达上限，明天再来试试" }),
+            {
+              status: 429,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            }
+          );
+        }
       }
     }
   } catch {

@@ -1,3 +1,5 @@
+import { getOrCreateUserId } from "@/utils/userId";
+
 const API_BASE = "/api";
 
 export async function saveReadings(records: any[]) {
@@ -25,7 +27,11 @@ export async function getTarotReading(payload: {
 }) {
   const res = await fetch(`${API_BASE}/tarot-reading`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      // 8.31 加固：服务端按用户 ID 每日配额（防多 IP 轮换白嫖）
+      "X-Anonymous-Id": getOrCreateUserId(),
+    },
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error("解读请求失败");
