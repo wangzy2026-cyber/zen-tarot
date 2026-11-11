@@ -120,31 +120,40 @@ const Index = () => {
       if (!resp.ok) throw new Error("AI 解析失败");
       const reader = resp.body?.getReader();
       const decoder = new TextDecoder();
-      while (reader) {
+      // 网络分片随时可能把一行 "data: {...}" 或一个汉字从中间切开：
+      // 用 stream 模式解码（不切坏多字节字符），并把没收完的半行留到下一片再解析，避免丢字。
+      let buffer = "";
+      let finished = false;
+      const handleLine = (line: string): "crisis" | void => {
+        if (!line.startsWith("data: ")) return;
+        const data = line.slice(6).trim();
+        if (data === "[DONE]") {
+          finished = true;
+          return;
+        }
+        try {
+          const content = JSON.parse(data).choices?.[0]?.delta?.content;
+          if (content) {
+            accumulated += content;
+            // Second-layer defense: detect CRISIS_DETECTED from LLM
+            if (accumulated.trim().startsWith("CRISIS_DETECTED")) return "crisis";
+            setReading(accumulated);
+          }
+        } catch {}
+      };
+      while (reader && !finished) {
         const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n");
+        buffer += decoder.decode(value, { stream: !done });
+        const lines = buffer.split("\n");
+        buffer = done ? "" : lines.pop() ?? "";
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6).trim();
-            if (data === "[DONE]") break;
-            try {
-              const parsed = JSON.parse(data);
-              const content = parsed.choices?.[0]?.delta?.content;
-              if (content) {
-                accumulated += content;
-                // Second-layer defense: detect CRISIS_DETECTED from LLM
-                if (accumulated.trim().startsWith("CRISIS_DETECTED")) {
-                  setShowCrisis(true);
-                  setIsStreaming(false);
-                  return;
-                }
-                setReading((prev) => prev + content);
-              }
-            } catch {}
+          if (handleLine(line) === "crisis") {
+            setShowCrisis(true);
+            setIsStreaming(false);
+            return;
           }
         }
+        if (done) break;
       }
       // 解读完整生成后，把文字存到这次占卜的第一行（只存一次；不额外调用 AI，不花 token）
       saveReadingText(accumulated);
