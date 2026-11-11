@@ -15,12 +15,30 @@ import {
 // 「回访追问」：问过的问题过了 7 天，再打开网页时轻轻问一句「后来怎么样了？」。
 // 重点是帮用户回顾自己的决定，和占卜准不准无关。写下的内容只存在本机。
 
+// 预览用：网址后加 ?demo=followup 会显示一条示例回访（不读写任何真实数据）
+const DEMO = (() => {
+  try {
+    return new URLSearchParams(window.location.search).get("demo") === "followup";
+  } catch {
+    return false;
+  }
+})();
+const DEMO_ITEM: AskedQuestion = {
+  readingId: "demo",
+  question: "要不要换工作？",
+  askedAt: new Date(Date.now() - 8 * 86400000).toISOString(),
+};
+
 const FollowUpPrompt = () => {
   const [item, setItem] = useState<AskedQuestion | null>(null);
   const [text, setText] = useState("");
   const [done, setDone] = useState(false);
 
   useEffect(() => {
+    if (DEMO) {
+      setItem(DEMO_ITEM);
+      return;
+    }
     let alive = true;
     const pick = () => alive && setItem(pickFollowUp());
     if (hasSeeded()) {
@@ -41,13 +59,13 @@ const FollowUpPrompt = () => {
 
   const handleSave = () => {
     if (!text.trim()) return;
-    recordFollowUp(item.readingId, text);
+    if (!DEMO) recordFollowUp(item.readingId, text);
     setDone(true);
     setTimeout(() => setItem(null), 2200);
   };
 
   const handleSkip = () => {
-    dismissFollowUp(item.readingId);
+    if (!DEMO) dismissFollowUp(item.readingId);
     setItem(null);
   };
 
