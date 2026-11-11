@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Eye } from "lucide-react";
 import Starfield from "@/components/Starfield";
-import { getReadings } from "@/lib/api";
+import { getReadings, getFollowUps, saveFollowUp, FollowUpRecord } from "@/lib/api";
 import { getOrCreateUserId } from "@/utils/userId";
-import { getFollowUpMap } from "@/utils/localJournal";
+import { markFollowedLocally } from "@/utils/localJournal";
 import { TAROT_DECK } from "@/data/tarotDeck";
 import { getDailyReminder } from "@/data/dailyReminders";
 
@@ -30,11 +30,46 @@ const Chronicles = () => {
   const [readings, setReadings] = useState<ReadingSummary[]>([]);
   const [selected, setSelected] = useState<ReadingSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [followUps] = useState(() => getFollowUpMap());
+  const [followUps, setFollowUps] = useState<Record<string, FollowUpRecord>>({});
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     fetchHistory();
+    getFollowUps()
+      .then((rows) => {
+        const m: Record<string, FollowUpRecord> = {};
+        for (const r of rows || []) m[r.reading_id] = r;
+        setFollowUps(m);
+      })
+      .catch(() => {});
   }, []);
+
+  // 切换到另一条记录时清空草稿
+  useEffect(() => {
+    setDraft("");
+    setSaveError("");
+  }, [selected?.reading_id]);
+
+  const handleSaveFollowUp = async () => {
+    if (!selected || !draft.trim() || saving) return;
+    setSaving(true);
+    setSaveError("");
+    try {
+      const rec = await saveFollowUp(selected.reading_id, draft.trim());
+      setFollowUps((m) => ({ ...m, [rec.reading_id]: rec }));
+      markFollowedLocally(selected.reading_id, draft);
+      setDraft("");
+    } catch {
+      setSaveError("没存上，稍后再试一次");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const daysAfter = (fromIso: string, toIso: string) =>
+    Math.max(0, Math.round((new Date(toIso).getTime() - new Date(fromIso).getTime()) / 86400000));
 
   const fetchHistory = async () => {
     const userId = getOrCreateUserId();
@@ -151,6 +186,11 @@ const Chronicles = () => {
                         <p className="text-primary/80 text-sm mb-2 line-clamp-1">
                           {r.question}
                         </p>
+                        {followUps[r.reading_id] && (
+                          <p className="text-muted-foreground/60 text-[11px] mb-2 line-clamp-1">
+                            后来：{followUps[r.reading_id].content}
+                          </p>
+                        )}
                         <div className="flex flex-wrap gap-1.5">
                           {r.cards.map((c, ci) => (
                             <span
@@ -207,18 +247,6 @@ const Chronicles = () => {
                   ))}
                 </div>
 
-                {/* 回访：用户 7 天后补写的近况（只存在本机） */}
-                {followUps[selected.reading_id]?.followUp && (
-                  <>
-                    <h2 className="text-primary/50 text-xs tracking-[0.3em] uppercase mb-3">
-                      后来
-                    </h2>
-                    <div className="text-foreground/70 text-sm leading-relaxed whitespace-pre-line border border-primary/10 rounded-xl p-5 bg-secondary/15 mb-8">
-                      {followUps[selected.reading_id].followUp}
-                    </div>
-                  </>
-                )}
-
                 {/* Reading */}
                 <h2 className="text-primary/50 text-xs tracking-[0.3em] uppercase mb-3">
                   {selected.spread_type === "daily" ? "提醒" : "解析"}
@@ -237,6 +265,45 @@ const Chronicles = () => {
                   <div className="flex items-center gap-2 text-muted-foreground/40 text-sm py-8 justify-center">
                     <Eye className="w-3.5 h-3.5" />
                     <span>该记录未保存解析文本</span>
+                  </div>
+                )}
+
+                {/* 后来：占卜若干天后补写的近况 */}
+                {selected.spread_type !== "daily" && (
+                  <div className="mt-8">
+                    <h2 className="text-primary/50 text-xs tracking-[0.3em] uppercase mb-3">后来</h2>
+                    {followUps[selected.reading_id] ? (
+                      <div className="border border-primary/10 rounded-xl p-5 bg-secondary/15">
+                        <p className="text-foreground/70 text-sm leading-relaxed whitespace-pre-line">
+                          {followUps[selected.reading_id].content}
+                        </p>
+                        <p className="text-muted-foreground/50 text-[10px] tracking-wider mt-3">
+                          {formatDate(followUps[selected.reading_id].created_at)} ·{" "}
+                          {daysAfter(selected.created_at, followUps[selected.reading_id].created_at)} 天后写下
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="border border-dashed border-primary/15 rounded-xl p-4">
+                        <textarea
+                          value={draft}
+                          maxLength={200}
+                          rows={2}
+                          onChange={(e) => setDraft(e.target.value)}
+                          placeholder="这件事后来怎么样了？补一句"
+                          className="w-full bg-transparent text-foreground/80 placeholder:text-muted-foreground/50 text-sm focus:outline-none resize-none"
+                        />
+                        {saveError && <p className="text-amber-400/80 text-[11px] mt-1">{saveError}</p>}
+                        <div className="flex justify-end mt-2">
+                          <button
+                            onClick={handleSaveFollowUp}
+                            disabled={!draft.trim() || saving}
+                            className="px-4 py-1.5 border border-primary/25 text-primary/80 text-xs tracking-[0.2em] hover:border-primary/40 hover:bg-primary/5 transition-all disabled:opacity-30"
+                          >
+                            {saving ? "保存中…" : "记下来"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </motion.div>

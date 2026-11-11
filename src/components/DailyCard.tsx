@@ -23,22 +23,16 @@ const DailyCard = () => {
   const [today, setToday] = useState<DailyCardState | null>(() => getTodayDailyCard());
   const [open, setOpen] = useState(false);
   const [card, setCard] = useState<DrawnCard | null>(null);
-  const [note, setNote] = useState("");
-  const [saved, setSaved] = useState(false);
 
   const handleOpen = () => {
     const existing = getTodayDailyCard();
     if (existing) {
       setToday(existing);
       setCard(toDrawn(existing.cardName, true));
-      setNote(existing.note || "");
-      setSaved(!!existing.note);
     } else {
       // 先发一张背面朝上的牌，等用户自己翻
       const [picked] = drawCards(1);
       setCard({ ...picked, id: 0, flipped: false, loaded: false, reversed: false, position: "每日一牌" });
-      setNote("");
-      setSaved(false);
     }
     setOpen(true);
   };
@@ -70,14 +64,6 @@ const DailyCard = () => {
   };
 
   const handleImageLoad = () => setCard((c) => (c ? { ...c, loaded: true } : c));
-
-  const handleSaveNote = () => {
-    if (!today) return;
-    const next = { ...today, note: note.trim() };
-    saveTodayDailyCard(next);
-    setToday(next);
-    setSaved(true);
-  };
 
   return (
     <>
@@ -131,30 +117,7 @@ const DailyCard = () => {
                 <p className="text-muted-foreground text-xs tracking-wider">点击翻开</p>
               ) : (
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
-                  <p className="text-foreground/80 text-sm leading-relaxed mb-6">{getDailyReminder(card.name)}</p>
-                  {saved ? (
-                    <p className="text-muted-foreground text-xs leading-relaxed">
-                      {note ? <>今天我想留意：{note}</> : "已收下这张提醒"}
-                    </p>
-                  ) : (
-                    <div className="flex flex-col items-center gap-3">
-                      <input
-                        type="text"
-                        value={note}
-                        maxLength={60}
-                        onChange={(e) => setNote(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleSaveNote()}
-                        placeholder="今天我想留意……（可不填）"
-                        className="w-full bg-transparent border-b border-primary/15 text-primary placeholder:text-muted-foreground text-center text-sm py-2 focus:outline-none focus:border-primary/40 transition-colors"
-                      />
-                      <button
-                        onClick={handleSaveNote}
-                        className="px-6 py-2 border border-primary/25 text-primary/80 text-xs tracking-[0.3em] hover:border-primary/40 hover:bg-primary/5 transition-all"
-                      >
-                        收下
-                      </button>
-                    </div>
-                  )}
+                  <p className="text-foreground/80 text-sm leading-relaxed">{getDailyReminder(card.name)}</p>
                   <p className="text-muted-foreground/40 text-[10px] mt-6">明天会是新的一张</p>
                 </motion.div>
               )}

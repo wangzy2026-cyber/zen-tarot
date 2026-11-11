@@ -1,5 +1,5 @@
-// 本机小日记：「今日一张」和「回访追问」的数据都只存在用户自己的浏览器里（localStorage），
-// 不上传服务器 —— 回访写下的近况属于个人隐私，没必要离开用户的设备。
+// 本机状态：「每日一牌」当天抽到哪张、「回访追问」该问哪条（问过哪些问题、哪些已回访/已关掉）。
+// 「后来」的正文以服务器 follow_ups 表为准（见 /api/follow-ups），这里只记一份用于排期和去重。
 // 所有读写都包在 try/catch 里：隐私模式或存储被禁用时，功能静默降级，不影响抽牌主流程。
 
 const DAILY_KEY = "zt_daily_card";
@@ -32,12 +32,11 @@ function write(key: string, value: unknown) {
   }
 }
 
-// ---------------- 今日一张 ----------------
+// ---------------- 每日一牌 ----------------
 
 export interface DailyCardState {
   date: string; // localDateKey
   cardName: string; // 英文名，对应 TAROT_DECK.name
-  note?: string; // 用户写下的「今天我想留意……」
 }
 
 /** 今天已经抽过的那张（没有则返回 null） */
@@ -149,11 +148,11 @@ export function dismissFollowUp(readingId: string) {
   write(LAST_ACTION_KEY, localDateKey());
 }
 
-/** 按 readingId 取回访内容（给「馆藏」页展示用） */
-export function getFollowUpMap(): Record<string, AskedQuestion> {
-  const m: Record<string, AskedQuestion> = {};
-  for (const q of listAskedQuestions()) if (q.followUp) m[q.readingId] = q;
-  return m;
+/** 在「馆藏」里补写了「后来」：本地也标记一下，回访卡片就不会再问这一次 */
+export function markFollowedLocally(readingId: string, text: string) {
+  const all = listAskedQuestions();
+  if (!all.some((q) => q.readingId === readingId)) return;
+  saveAll(all.map((q) => (q.readingId === readingId ? { ...q, followUp: text.trim(), followedAt: new Date().toISOString() } : q)));
 }
 
 /** 「7 天前」「3 周前」这类相对时间 */
