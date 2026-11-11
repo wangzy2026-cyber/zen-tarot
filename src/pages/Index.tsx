@@ -38,6 +38,9 @@ const Index = () => {
   const streamTriggered = useRef(false);
   const savedToDb = useRef(false);
   const readingId = useRef(crypto.randomUUID());
+  // 已写入 D1 的那几行（解读生成完后，把解读文字补存到第一行上）
+  const savedRows = useRef<any[]>([]);
+  const textSaved = useRef(false);
 
   const allFlipped = cards.length > 0 && cards.every((c) => c.flipped);
 
@@ -83,6 +86,7 @@ const Index = () => {
       cards: cards.map((c) => `${c.nameCn}${c.reversed ? "(逆)" : ""}`).join(" · "),
     });
 
+    savedRows.current = rows;
     try {
       await saveReadings(rows);
       track("complete_tarot_draw");
@@ -142,11 +146,29 @@ const Index = () => {
           }
         }
       }
+      // 解读完整生成后，把文字存到这次占卜的第一行（只存一次；不额外调用 AI，不花 token）
+      saveReadingText(accumulated);
     } catch {
       accumulated = "星象迷离，暂时无法解读。";
       setReading(accumulated);
     } finally {
       setIsStreaming(false);
+    }
+  };
+
+  const saveReadingText = async (text: string) => {
+    if (textSaved.current || !text.trim()) return;
+    // 抽牌记录可能还在写入中，稍等一下再补存
+    for (let i = 0; i < 10 && !savedRows.current.length; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    const first = savedRows.current[0];
+    if (!first) return;
+    textSaved.current = true;
+    try {
+      await saveReadings([{ ...first, reading_text: text.slice(0, 8000) }]);
+    } catch {
+      /* 存不上不影响用户看解读 */
     }
   };
 
@@ -212,6 +234,8 @@ const Index = () => {
     setIsStreaming(false);
     streamTriggered.current = false;
     savedToDb.current = false;
+    savedRows.current = [];
+    textSaved.current = false;
     readingId.current = crypto.randomUUID();
     localStorage.removeItem("tarot_question");
   };

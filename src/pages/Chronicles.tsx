@@ -99,6 +99,8 @@ const Chronicles = () => {
           reading_text: row.reading_text as string | null,
         };
       }
+      // 解读文字只存在其中一行上，哪一行有就用哪一行
+      if (!grouped[rid].reading_text && row.reading_text) grouped[rid].reading_text = row.reading_text;
       grouped[rid].cards.push({
         card_name_cn: row.card_name,
         is_reversed: !!row.is_reversed,
