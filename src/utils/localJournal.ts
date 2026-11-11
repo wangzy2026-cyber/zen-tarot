@@ -5,6 +5,7 @@
 const DAILY_KEY = "zt_daily_card";
 const ASKED_KEY = "zt_asked_questions";
 const SEEDED_KEY = "zt_asked_seeded";
+const LAST_ACTION_KEY = "zt_followup_last_action"; // 最近一次回访 / 关掉的日期
 
 /** 本地日期 YYYY-MM-DD（按用户所在时区，过了本地午夜就是新的一天） */
 export function localDateKey(d: Date = new Date()): string {
@@ -105,8 +106,12 @@ export function hasSeeded(): boolean {
   return read<boolean>(SEEDED_KEY, false);
 }
 
-/** 找一条该回访的问题：7–60 天前问的、还没回访也没被关掉的里面，最早的那条 */
+/**
+ * 找一条该回访的问题：7–60 天前问的、还没回访也没被关掉的里面，**离现在最近**的那条
+ * （记忆更新鲜，也更可能还在意）。每天最多处理一条：今天已经写过或关掉一条，就不再追问。
+ */
 export function pickFollowUp(now: Date = new Date()): AskedQuestion | null {
+  if (read<string>(LAST_ACTION_KEY, "") === localDateKey(now)) return null;
   const dayMs = 86400000;
   const due = listAskedQuestions().filter((q) => {
     if (q.followUp || q.dismissed) return false;
@@ -114,19 +119,34 @@ export function pickFollowUp(now: Date = new Date()): AskedQuestion | null {
     return age >= FOLLOW_UP_MIN_DAYS && age <= FOLLOW_UP_MAX_DAYS;
   });
   if (!due.length) return null;
-  return due.sort((a, b) => a.askedAt.localeCompare(b.askedAt))[0];
+  return due.sort((a, b) => b.askedAt.localeCompare(a.askedAt))[0];
 }
 
+// 同一个问题问过好几次的，回访一次就算全部回访过，不重复追问
+const sameQuestion = (a: AskedQuestion, target?: AskedQuestion) =>
+  !!target && (a.readingId === target.readingId || a.question.trim() === target.question.trim());
+
 export function recordFollowUp(readingId: string, text: string) {
-  const list = listAskedQuestions().map((q) =>
-    q.readingId === readingId ? { ...q, followUp: text.trim(), followedAt: new Date().toISOString() } : q
+  const all = listAskedQuestions();
+  const target = all.find((q) => q.readingId === readingId);
+  const now = new Date().toISOString();
+  saveAll(
+    all.map((q) =>
+      q.readingId === readingId
+        ? { ...q, followUp: text.trim(), followedAt: now }
+        : sameQuestion(q, target) && !q.followUp
+          ? { ...q, dismissed: true }
+          : q
+    )
   );
-  saveAll(list);
+  write(LAST_ACTION_KEY, localDateKey());
 }
 
 export function dismissFollowUp(readingId: string) {
-  const list = listAskedQuestions().map((q) => (q.readingId === readingId ? { ...q, dismissed: true } : q));
-  saveAll(list);
+  const all = listAskedQuestions();
+  const target = all.find((q) => q.readingId === readingId);
+  saveAll(all.map((q) => (sameQuestion(q, target) ? { ...q, dismissed: true } : q)));
+  write(LAST_ACTION_KEY, localDateKey());
 }
 
 /** 按 readingId 取回访内容（给「馆藏」页展示用） */
