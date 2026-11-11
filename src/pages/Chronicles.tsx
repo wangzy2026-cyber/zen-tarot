@@ -5,6 +5,9 @@ import { ArrowLeft, ChevronRight, Eye } from "lucide-react";
 import Starfield from "@/components/Starfield";
 import { getReadings } from "@/lib/api";
 import { getOrCreateUserId } from "@/utils/userId";
+import { getFollowUpMap } from "@/utils/localJournal";
+import { TAROT_DECK } from "@/data/tarotDeck";
+import { getDailyReminder } from "@/data/dailyReminders";
 
 interface ReadingSummary {
   reading_id: string;
@@ -19,6 +22,7 @@ const SPREAD_LABELS: Record<string, string> = {
   single: "单牌指引",
   trinity: "圣三角",
   celtic: "凯尔特十字",
+  daily: "今日一张",
 };
 
 const Chronicles = () => {
@@ -26,6 +30,7 @@ const Chronicles = () => {
   const [readings, setReadings] = useState<ReadingSummary[]>([]);
   const [selected, setSelected] = useState<ReadingSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [followUps] = useState(() => getFollowUpMap());
 
   useEffect(() => {
     fetchHistory();
@@ -202,11 +207,29 @@ const Chronicles = () => {
                   ))}
                 </div>
 
+                {/* 回访：用户 7 天后补写的近况（只存在本机） */}
+                {followUps[selected.reading_id]?.followUp && (
+                  <>
+                    <h2 className="text-primary/50 text-xs tracking-[0.3em] uppercase mb-3">
+                      后来
+                    </h2>
+                    <div className="text-foreground/70 text-sm leading-relaxed whitespace-pre-line border border-primary/10 rounded-xl p-5 bg-secondary/15 mb-8">
+                      {followUps[selected.reading_id].followUp}
+                    </div>
+                  </>
+                )}
+
                 {/* Reading */}
                 <h2 className="text-primary/50 text-xs tracking-[0.3em] uppercase mb-3">
-                  解析
+                  {selected.spread_type === "daily" ? "提醒" : "解析"}
                 </h2>
-                {selected.reading_text ? (
+                {selected.spread_type === "daily" ? (
+                  <div className="text-foreground/70 text-sm leading-relaxed border border-primary/10 rounded-xl p-5 bg-secondary/15">
+                    {getDailyReminder(
+                      TAROT_DECK.find((d) => d.nameCn === selected.cards[0]?.card_name_cn)?.name || ""
+                    )}
+                  </div>
+                ) : selected.reading_text ? (
                   <div className="text-foreground/70 text-sm leading-relaxed whitespace-pre-line border border-primary/10 rounded-xl p-5 bg-secondary/15">
                     {selected.reading_text}
                   </div>

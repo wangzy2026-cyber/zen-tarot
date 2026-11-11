@@ -15,6 +15,9 @@ import DonateModal from "@/components/DonateModal";
 import CrisisInterventionView from "@/components/CrisisInterventionView";
 import { containsCrisisKeyword } from "@/utils/crisisDetection";
 import MigrationModal from "@/components/MigrationModal";
+import DailyCard from "@/components/DailyCard";
+import FollowUpPrompt from "@/components/FollowUpPrompt";
+import { rememberQuestion } from "@/utils/localJournal";
 import { drawCards } from "@/data/tarotDeck";
 import { SpreadType, SPREADS, DrawnCard } from "@/types/tarot";
 import { saveReadings, getTarotReading } from "@/lib/api";
@@ -70,6 +73,15 @@ const Index = () => {
       click_donate: false,
       anonymous_id: userId,
     }));
+
+    // 记到本机，7 天后「回访追问」用
+    rememberQuestion({
+      readingId: rid,
+      question: finalQuestion,
+      askedAt: new Date().toISOString(),
+      spreadLabel: SPREADS[spread].label,
+      cards: cards.map((c) => `${c.nameCn}${c.reversed ? "(逆)" : ""}`).join(" · "),
+    });
 
     try {
       await saveReadings(rows);
@@ -228,10 +240,12 @@ const Index = () => {
               transition={{ duration: 0.6 }}
               className="flex flex-col items-center w-full max-w-md"
             >
+              <FollowUpPrompt />
               <Sparkles className="w-6 h-6 text-primary/40 mb-6" />
               <h1 className="text-2xl md:text-3xl font-light text-primary mb-8 tracking-widest text-center">
                 塔罗启示
               </h1>
+              <DailyCard />
               <SpreadSelector value={spread} onChange={setSpread} />
               <div className="flex items-center gap-2.5 mb-6 mt-2">
                 <Switch
