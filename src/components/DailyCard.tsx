@@ -81,13 +81,22 @@ const DailyCard = () => {
 
   return (
     <>
-      <button
+      <motion.button
         onClick={handleOpen}
-        className="flex items-center gap-1.5 text-muted-foreground/60 text-xs tracking-wider hover:text-primary/70 transition-colors mb-8 -mt-4"
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.6 }}
+        className="relative flex items-center gap-2 px-5 py-2.5 mb-8 -mt-2 rounded-full border border-primary/40 bg-primary/10 text-primary text-sm tracking-widest shadow-[0_0_24px_-6px_hsl(var(--primary)/0.6)] hover:bg-primary/15 hover:border-primary/60 transition-all"
       >
-        <Sun className="w-3.5 h-3.5" />
-        {today ? "今日一张 · 再看看" : "抽一张今天给自己的提醒"}
-      </button>
+        {!today && (
+          <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary/60" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
+          </span>
+        )}
+        <Sun className="w-4 h-4" />
+        {today ? "今日一张 · 再看看" : "今日一张 · 抽一张给自己的提醒"}
+      </motion.button>
 
       <AnimatePresence>
         {open && card && (
