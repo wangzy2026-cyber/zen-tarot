@@ -92,7 +92,7 @@ export function seedFromHistory(rows: { reading_id?: string; question?: string; 
   const known = new Set(list.map((x) => x.readingId));
   for (const r of rows) {
     if (!r.reading_id || !r.created_at || known.has(r.reading_id)) continue;
-    if (r.spread_type === "daily") continue; // 「今日一张」不是提问
+    if (r.spread_type === "daily") continue; // 「每日一牌」不是提问
     if (!isRealQuestion(r.question || "")) continue;
     known.add(r.reading_id);
     list.push({ readingId: r.reading_id, question: r.question!, askedAt: r.created_at });

@@ -16,7 +16,7 @@ import { getTodayDailyCard, saveTodayDailyCard, localDateKey, DailyCardState } f
 const toDrawn = (name: string, flipped: boolean): DrawnCard | null => {
   const c = TAROT_DECK.find((x) => x.name === name);
   if (!c) return null;
-  return { ...c, id: 0, flipped, loaded: false, reversed: false, position: "今日一张" };
+  return { ...c, id: 0, flipped, loaded: false, reversed: false, position: "每日一牌" };
 };
 
 const DailyCard = () => {
@@ -36,7 +36,7 @@ const DailyCard = () => {
     } else {
       // 先发一张背面朝上的牌，等用户自己翻
       const [picked] = drawCards(1);
-      setCard({ ...picked, id: 0, flipped: false, loaded: false, reversed: false, position: "今日一张" });
+      setCard({ ...picked, id: 0, flipped: false, loaded: false, reversed: false, position: "每日一牌" });
       setNote("");
       setSaved(false);
     }
@@ -58,9 +58,9 @@ const DailyCard = () => {
         card_name: card.nameCn || card.name,
         is_reversed: false,
         spread_type: "daily",
-        position_label: "今日一张",
+        position_label: "每日一牌",
         city_alias: getRandomCityAlias(),
-        question: "今日一张",
+        question: "每日一牌",
         reading_id: crypto.randomUUID(),
         is_manual_mode: false,
         click_donate: false,
@@ -95,7 +95,7 @@ const DailyCard = () => {
           </span>
         )}
         <Sun className="w-4 h-4" />
-        {today ? "今日一张 · 再看看" : "今日一张 · 抽一张给自己的提醒"}
+        {today ? "每日一牌 · 再看一眼" : "每日一牌"}
       </motion.button>
 
       <AnimatePresence>
@@ -121,14 +121,14 @@ const DailyCard = () => {
               >
                 <X className="w-4 h-4" />
               </button>
-              <h2 className="text-primary text-sm tracking-[0.4em] mb-6 font-light">今日一张</h2>
+              <h2 className="text-primary text-sm tracking-[0.4em] mb-6 font-light">每日一牌</h2>
 
               <div className="flex justify-center mb-6">
                 <TarotCard card={card} index={0} onFlip={handleFlip} onImageLoad={handleImageLoad} />
               </div>
 
               {!card.flipped ? (
-                <p className="text-muted-foreground text-xs tracking-wider">静一静，点击翻开</p>
+                <p className="text-muted-foreground text-xs tracking-wider">点击翻开</p>
               ) : (
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
                   <p className="text-foreground/80 text-sm leading-relaxed mb-6">{getDailyReminder(card.name)}</p>
@@ -155,7 +155,7 @@ const DailyCard = () => {
                       </button>
                     </div>
                   )}
-                  <p className="text-muted-foreground/40 text-[10px] mt-6">一天一张 · 只是提醒，不是预言</p>
+                  <p className="text-muted-foreground/40 text-[10px] mt-6">明天会是新的一张</p>
                 </motion.div>
               )}
             </motion.div>

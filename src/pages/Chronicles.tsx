@@ -22,7 +22,7 @@ const SPREAD_LABELS: Record<string, string> = {
   single: "单牌指引",
   trinity: "圣三角",
   celtic: "凯尔特十字",
-  daily: "今日一张",
+  daily: "每日一牌",
 };
 
 const Chronicles = () => {
